@@ -1,0 +1,1273 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Custas Diárias — EAZ</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;0,700;1,400;1,600&family=DM+Mono:wght@300;400;500&family=Libre+Baskerville:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --navy: #0D1B2A;
+    --navy-light: #1C3A5E;
+    --navy-mid: #162840;
+    --gold: #C9A84C;
+    --gold-light: #E8C96A;
+    --gold-pale: #FFF8E8;
+    --cream: #FAF7F2;
+    --white: #FFFFFF;
+    --gray-l: #F4F3EF;
+    --gray-m: #D8D6CE;
+    --gray-d: #7A7870;
+    --green: #2E7D52;
+    --green-bg: #EBF5F0;
+    --red: #9B2C2C;
+    --red-bg: #FDF2F2;
+    --orange: #C06020;
+    --shadow: 0 4px 24px rgba(13,27,42,0.12);
+    --shadow-sm: 0 2px 8px rgba(13,27,42,0.08);
+    --radius: 3px;
+    --font-display: 'Cormorant Garamond', Georgia, serif;
+    --font-body: 'Libre Baskerville', Georgia, serif;
+    --font-mono: 'DM Mono', monospace;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: var(--font-body);
+    background: var(--cream);
+    color: var(--navy);
+    min-height: 100vh;
+  }
+
+  /* ─── TOP BAR ──────────────────────────────────────────── */
+  .topbar {
+    background: var(--navy);
+    padding: 0 2rem;
+    height: 56px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    border-bottom: 2px solid var(--gold);
+  }
+  .topbar-brand {
+    font-family: var(--font-display);
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: var(--gold);
+    letter-spacing: 0.04em;
+  }
+  .topbar-brand span {
+    font-weight: 400;
+    font-style: italic;
+    color: rgba(201,168,76,0.55);
+    font-size: 0.85rem;
+    margin-left: 1rem;
+  }
+  .topbar-actions {
+    display: flex;
+    gap: 0.75rem;
+    align-items: center;
+  }
+
+  /* ─── BUTTONS ──────────────────────────────────────────── */
+  .btn {
+    font-family: var(--font-body);
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    border: none;
+    border-radius: var(--radius);
+    padding: 0.45rem 1rem;
+    cursor: pointer;
+    transition: all 0.18s;
+  }
+  .btn-gold {
+    background: var(--gold);
+    color: var(--navy);
+  }
+  .btn-gold:hover { background: var(--gold-light); transform: translateY(-1px); }
+  .btn-outline {
+    background: transparent;
+    color: var(--gold);
+    border: 1px solid var(--gold);
+  }
+  .btn-outline:hover { background: rgba(201,168,76,0.1); }
+  .btn-ghost {
+    background: rgba(255,255,255,0.08);
+    color: rgba(255,255,255,0.7);
+    border: 1px solid rgba(255,255,255,0.15);
+  }
+  .btn-ghost:hover { background: rgba(255,255,255,0.14); color: var(--white); }
+  .btn-danger {
+    background: transparent;
+    color: var(--red);
+    border: 1px solid rgba(155,44,44,0.3);
+    font-size: 0.7rem;
+    padding: 0.3rem 0.6rem;
+  }
+  .btn-danger:hover { background: var(--red-bg); }
+  .btn-sm {
+    font-size: 0.7rem;
+    padding: 0.3rem 0.7rem;
+  }
+
+  /* ─── LAYOUT ─────────────────────────────────────────── */
+  .layout {
+    display: grid;
+    grid-template-columns: 240px 1fr;
+    min-height: calc(100vh - 56px);
+  }
+
+  /* ─── SIDEBAR ────────────────────────────────────────── */
+  .sidebar {
+    background: var(--navy);
+    padding: 1.5rem 0;
+    border-right: 1px solid rgba(201,168,76,0.2);
+    position: sticky;
+    top: 56px;
+    height: calc(100vh - 56px);
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+  }
+  .sidebar-section {
+    padding: 0 1.25rem;
+    margin-bottom: 1.5rem;
+  }
+  .sidebar-label {
+    font-family: var(--font-mono);
+    font-size: 0.62rem;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: rgba(201,168,76,0.45);
+    padding: 0 1.25rem;
+    margin-bottom: 0.5rem;
+  }
+  .month-tab {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.6rem 1.25rem;
+    cursor: pointer;
+    transition: all 0.15s;
+    border-left: 3px solid transparent;
+    gap: 0.5rem;
+  }
+  .month-tab:hover { background: rgba(255,255,255,0.05); }
+  .month-tab.active {
+    background: rgba(201,168,76,0.1);
+    border-left-color: var(--gold);
+  }
+  .month-tab-name {
+    font-family: var(--font-display);
+    font-size: 0.9rem;
+    color: rgba(255,255,255,0.75);
+    flex: 1;
+    font-weight: 600;
+  }
+  .month-tab.active .month-tab-name { color: var(--gold-light); }
+  .month-tab-total {
+    font-family: var(--font-mono);
+    font-size: 0.65rem;
+    color: rgba(201,168,76,0.5);
+    white-space: nowrap;
+  }
+  .month-tab.active .month-tab-total { color: var(--gold); }
+  .sidebar-bottom {
+    margin-top: auto;
+    padding: 1rem 1.25rem;
+    border-top: 1px solid rgba(201,168,76,0.15);
+  }
+  #add-month-btn {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    padding: 0.65rem;
+    background: transparent;
+    border: 1px dashed rgba(201,168,76,0.35);
+    color: rgba(201,168,76,0.6);
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    cursor: pointer;
+    border-radius: var(--radius);
+    transition: all 0.18s;
+  }
+  #add-month-btn:hover {
+    border-color: var(--gold);
+    color: var(--gold);
+    background: rgba(201,168,76,0.05);
+  }
+
+  /* ─── MAIN CONTENT ───────────────────────────────────── */
+  .main {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  /* ─── PAGE: RESUMO ───────────────────────────────────── */
+  .page { display: none; }
+  .page.active { display: block; }
+
+  .resumo-header {
+    background: linear-gradient(135deg, var(--navy) 0%, var(--navy-light) 100%);
+    padding: 2.5rem 2.5rem 2rem;
+    border-bottom: 2px solid var(--gold);
+  }
+  .resumo-title {
+    font-family: var(--font-display);
+    font-size: 2.4rem;
+    font-weight: 700;
+    color: var(--gold);
+    line-height: 1.1;
+    margin-bottom: 0.3rem;
+  }
+  .resumo-sub {
+    font-family: var(--font-display);
+    font-style: italic;
+    font-size: 0.9rem;
+    color: rgba(201,168,76,0.5);
+  }
+
+  .resumo-cards {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1.25rem;
+    padding: 1.75rem 2.5rem;
+    background: var(--cream);
+  }
+  .stat-card {
+    background: var(--white);
+    border: 1px solid var(--gray-m);
+    border-radius: var(--radius);
+    padding: 1.25rem 1.5rem;
+    box-shadow: var(--shadow-sm);
+    position: relative;
+    overflow: hidden;
+  }
+  .stat-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 3px;
+    background: var(--gold);
+  }
+  .stat-label {
+    font-family: var(--font-mono);
+    font-size: 0.65rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--gray-d);
+    margin-bottom: 0.5rem;
+  }
+  .stat-value {
+    font-family: var(--font-display);
+    font-size: 1.9rem;
+    font-weight: 700;
+    color: var(--navy);
+    line-height: 1;
+  }
+  .stat-value.gold { color: var(--gold); }
+  .stat-sub {
+    font-size: 0.7rem;
+    color: var(--gray-d);
+    margin-top: 0.35rem;
+    font-family: var(--font-mono);
+  }
+
+  /* ─── RESUMO TABLE ───────────────────────────────────── */
+  .resumo-table-wrap {
+    padding: 0 2.5rem 2.5rem;
+  }
+  .section-title {
+    font-family: var(--font-display);
+    font-size: 1.15rem;
+    font-weight: 600;
+    color: var(--navy);
+    padding-bottom: 0.75rem;
+    margin-bottom: 1rem;
+    border-bottom: 1px solid var(--gray-m);
+    display: flex;
+    align-items: baseline;
+    gap: 1rem;
+  }
+  .section-title-sub {
+    font-style: italic;
+    font-size: 0.8rem;
+    color: var(--gray-d);
+    font-weight: 400;
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.82rem;
+  }
+  thead th {
+    background: var(--navy);
+    color: var(--white);
+    font-family: var(--font-display);
+    font-weight: 600;
+    font-size: 0.78rem;
+    letter-spacing: 0.04em;
+    padding: 0.7rem 1rem;
+    text-align: left;
+    border-bottom: 2px solid var(--gold);
+  }
+  thead th.right { text-align: right; }
+  thead th.center { text-align: center; }
+  tbody tr {
+    border-bottom: 1px solid var(--gray-l);
+    transition: background 0.12s;
+  }
+  tbody tr:nth-child(even) { background: var(--gray-l); }
+  tbody tr:hover { background: rgba(201,168,76,0.06); cursor: pointer; }
+  tbody td {
+    padding: 0.6rem 1rem;
+    vertical-align: middle;
+    font-family: var(--font-body);
+  }
+  tbody td.right { text-align: right; }
+  tbody td.center { text-align: center; }
+  tbody td.mono { font-family: var(--font-mono); font-size: 0.75rem; color: var(--gray-d); }
+  tfoot td {
+    background: var(--navy);
+    color: var(--gold);
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 0.95rem;
+    padding: 0.75rem 1rem;
+  }
+  tfoot td.right { text-align: right; }
+
+  .badge {
+    display: inline-block;
+    font-family: var(--font-mono);
+    font-size: 0.65rem;
+    font-weight: 500;
+    letter-spacing: 0.06em;
+    padding: 0.2rem 0.5rem;
+    border-radius: 2px;
+    text-transform: uppercase;
+  }
+  .badge-green { background: var(--green-bg); color: var(--green); }
+  .badge-red { background: var(--red-bg); color: var(--red); }
+  .badge-gray { background: var(--gray-l); color: var(--gray-d); }
+  .badge-gold { background: rgba(201,168,76,0.12); color: var(--gold); }
+  .badge-orange { background: #FFF4EC; color: var(--orange); }
+
+  .var-up { color: var(--green); font-family: var(--font-mono); font-size: 0.75rem; }
+  .var-down { color: var(--red); font-family: var(--font-mono); font-size: 0.75rem; }
+
+  /* ─── PAGE: MONTH ───────────────────────────────────── */
+  .month-header {
+    background: linear-gradient(135deg, var(--navy) 0%, var(--navy-light) 100%);
+    padding: 1.75rem 2.5rem 1.5rem;
+    border-bottom: 2px solid var(--gold);
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 1rem;
+  }
+  .month-title {
+    font-family: var(--font-display);
+    font-size: 2rem;
+    font-weight: 700;
+    color: var(--gold);
+    line-height: 1;
+  }
+  .month-meta {
+    font-family: var(--font-mono);
+    font-size: 0.7rem;
+    color: rgba(201,168,76,0.5);
+    margin-top: 0.4rem;
+  }
+  .month-total-chip {
+    background: rgba(201,168,76,0.12);
+    border: 1px solid rgba(201,168,76,0.3);
+    border-radius: var(--radius);
+    padding: 0.6rem 1.25rem;
+    text-align: right;
+  }
+  .month-total-label {
+    font-family: var(--font-mono);
+    font-size: 0.62rem;
+    color: rgba(201,168,76,0.55);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+  .month-total-value {
+    font-family: var(--font-display);
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--gold-light);
+    margin-top: 0.15rem;
+  }
+
+  .month-toolbar {
+    padding: 1rem 2.5rem;
+    background: var(--white);
+    border-bottom: 1px solid var(--gray-m);
+    display: flex;
+    gap: 0.75rem;
+    align-items: center;
+  }
+  .filter-input {
+    font-family: var(--font-mono);
+    font-size: 0.78rem;
+    border: 1px solid var(--gray-m);
+    border-radius: var(--radius);
+    padding: 0.45rem 0.85rem;
+    background: var(--gray-l);
+    color: var(--navy);
+    width: 220px;
+    outline: none;
+    transition: border-color 0.15s;
+  }
+  .filter-input:focus { border-color: var(--gold); background: var(--white); }
+  .filter-input::placeholder { color: var(--gray-d); }
+
+  .month-table-wrap {
+    padding: 1.5rem 2.5rem;
+    overflow-x: auto;
+  }
+
+  /* ─── MODAL ──────────────────────────────────────────── */
+  .modal-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(13,27,42,0.7);
+    backdrop-filter: blur(4px);
+    z-index: 200;
+    align-items: center;
+    justify-content: center;
+  }
+  .modal-overlay.open { display: flex; }
+  .modal {
+    background: var(--white);
+    border-radius: var(--radius);
+    box-shadow: 0 20px 60px rgba(13,27,42,0.35);
+    width: 100%;
+    max-width: 560px;
+    overflow: hidden;
+    animation: slideUp 0.22s ease;
+  }
+  @keyframes slideUp {
+    from { transform: translateY(20px); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+  }
+  .modal-header {
+    background: var(--navy);
+    padding: 1.25rem 1.5rem;
+    border-bottom: 2px solid var(--gold);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .modal-title {
+    font-family: var(--font-display);
+    font-size: 1.15rem;
+    font-weight: 700;
+    color: var(--gold);
+  }
+  .modal-close {
+    background: none;
+    border: none;
+    color: rgba(255,255,255,0.5);
+    font-size: 1.3rem;
+    cursor: pointer;
+    line-height: 1;
+    transition: color 0.15s;
+  }
+  .modal-close:hover { color: var(--white); }
+  .modal-body { padding: 1.5rem; }
+  .modal-footer {
+    padding: 1rem 1.5rem;
+    border-top: 1px solid var(--gray-l);
+    display: flex;
+    gap: 0.75rem;
+    justify-content: flex-end;
+    background: var(--gray-l);
+  }
+
+  /* ─── FORM ───────────────────────────────────────────── */
+  .form-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+  }
+  .form-group { display: flex; flex-direction: column; gap: 0.35rem; }
+  .form-group.full { grid-column: 1 / -1; }
+  label {
+    font-family: var(--font-mono);
+    font-size: 0.65rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--gray-d);
+  }
+  input, select {
+    font-family: var(--font-body);
+    font-size: 0.82rem;
+    border: 1px solid var(--gray-m);
+    border-radius: var(--radius);
+    padding: 0.5rem 0.75rem;
+    background: var(--white);
+    color: var(--navy);
+    outline: none;
+    transition: border-color 0.15s;
+  }
+  input:focus, select:focus { border-color: var(--gold); }
+  select { cursor: pointer; }
+
+  /* ─── EMPTY STATE ────────────────────────────────────── */
+  .empty-state {
+    text-align: center;
+    padding: 3rem 2rem;
+    color: var(--gray-d);
+  }
+  .empty-icon {
+    font-size: 2.5rem;
+    margin-bottom: 0.75rem;
+    opacity: 0.4;
+  }
+  .empty-title {
+    font-family: var(--font-display);
+    font-size: 1.1rem;
+    color: var(--navy);
+    margin-bottom: 0.4rem;
+  }
+  .empty-sub { font-size: 0.8rem; }
+
+  /* ─── SCROLLBAR ──────────────────────────────────────── */
+  ::-webkit-scrollbar { width: 5px; height: 5px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--gray-m); border-radius: 3px; }
+  ::-webkit-scrollbar-thumb:hover { background: var(--gold); }
+
+  /* ─── DELETE ROW BTN ─────────────────────────────────── */
+  .row-delete {
+    opacity: 0;
+    transition: opacity 0.15s;
+    background: none;
+    border: none;
+    color: var(--red);
+    cursor: pointer;
+    font-size: 0.85rem;
+    padding: 0.2rem 0.4rem;
+    border-radius: 2px;
+  }
+  tbody tr:hover .row-delete { opacity: 1; }
+
+  .tipo-grerj  { background: #EBF0F8; color: #2B4C80; }
+  .tipo-gru    { background: #F0F8EB; color: #2B6B2B; }
+  .tipo-dep    { background: #FFF4EB; color: #8B5000; }
+  .tipo-cert   { background: #F8EBF8; color: #6B2B7A; }
+  .tipo-other  { background: var(--gray-l); color: var(--gray-d); }
+
+  .pago-sim    { color: var(--green); font-weight: 700; }
+  .pago-nao    { color: var(--red); }
+  .pago-null   { color: var(--gray-d); }
+
+  .chip-reimb  { background: var(--green-bg); color: var(--green); }
+  .chip-nreimb { background: var(--red-bg); color: var(--red); }
+</style>
+</head>
+<body>
+
+<!-- TOP BAR -->
+<div class="topbar">
+  <div class="topbar-brand">
+    EAZ — Custas Diárias
+    <span>Escritório de Advocacia Zveiter</span>
+  </div>
+  <div class="topbar-actions">
+    <button class="btn btn-ghost btn-sm" onclick="showPage('resumo')">Resumo Geral</button>
+    <button class="btn btn-gold btn-sm" onclick="openAddEntry()">+ Lançamento</button>
+  </div>
+</div>
+
+<div class="layout">
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <div class="sidebar-label">Visão Geral</div>
+    <div id="sidebar-resumo" class="month-tab active" onclick="showPage('resumo')">
+      <span class="month-tab-name">Resumo</span>
+    </div>
+
+    <div class="sidebar-label" style="margin-top:1rem">Meses</div>
+    <div id="month-tabs"></div>
+
+    <div class="sidebar-bottom">
+      <button id="add-month-btn" onclick="openAddMonth()">+ Novo Mês</button>
+    </div>
+  </aside>
+
+  <!-- MAIN -->
+  <main class="main">
+
+    <!-- PAGE: RESUMO -->
+    <div id="page-resumo" class="page active">
+      <div class="resumo-header">
+        <div>
+          <div class="resumo-title">Controle de Custas Processuais</div>
+          <div class="resumo-sub">2025 — 2026 · Atualizado em tempo real</div>
+        </div>
+      </div>
+
+      <div class="resumo-cards">
+        <div class="stat-card">
+          <div class="stat-label">Total Geral</div>
+          <div class="stat-value gold" id="stat-total">R$ 0,00</div>
+          <div class="stat-sub" id="stat-count">0 lançamentos</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Meses Registrados</div>
+          <div class="stat-value" id="stat-months">0</div>
+          <div class="stat-sub" id="stat-last">—</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Maior Mês</div>
+          <div class="stat-value gold" id="stat-max">—</div>
+          <div class="stat-sub" id="stat-max-val">R$ 0,00</div>
+        </div>
+      </div>
+
+      <div class="resumo-table-wrap">
+        <div class="section-title">
+          Resumo por Mês
+          <span class="section-title-sub">clique em um mês para ver os detalhes</span>
+        </div>
+        <table>
+          <thead>
+            <tr>
+              <th>Mês</th>
+              <th class="right">Lançamentos</th>
+              <th class="right">Total (R$)</th>
+              <th class="right">Reembolsável</th>
+              <th class="right">Não Reimb.</th>
+              <th class="center">Variação</th>
+            </tr>
+          </thead>
+          <tbody id="resumo-tbody"></tbody>
+          <tfoot>
+            <tr>
+              <td><strong>TOTAL GERAL</strong></td>
+              <td class="right"><span id="tfoot-count">0</span></td>
+              <td class="right"><strong id="tfoot-total">R$ 0,00</strong></td>
+              <td class="right" id="tfoot-reimb">R$ 0,00</td>
+              <td class="right" id="tfoot-nreimb">R$ 0,00</td>
+              <td></td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+    </div><!-- /resumo -->
+
+    <!-- PAGE: MONTH (dynamic) -->
+    <div id="page-month" class="page">
+      <div class="month-header">
+        <div>
+          <div class="month-title" id="month-title-display">—</div>
+          <div class="month-meta" id="month-meta-display">—</div>
+        </div>
+        <div class="month-total-chip">
+          <div class="month-total-label">Total do mês</div>
+          <div class="month-total-value" id="month-total-display">R$ 0,00</div>
+        </div>
+      </div>
+
+      <div class="month-toolbar">
+        <input type="text" class="filter-input" id="month-filter" placeholder="Filtrar por cliente, processo…" oninput="filterTable()">
+        <button class="btn btn-gold btn-sm" onclick="openAddEntry()">+ Lançamento</button>
+        <button class="btn btn-outline btn-sm" onclick="openDeleteMonth()">Excluir Mês</button>
+      </div>
+
+      <div class="month-table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Nº GRERJ / Doc.</th>
+              <th>Data</th>
+              <th class="center">Tipo</th>
+              <th>Cliente</th>
+              <th class="right">Valor</th>
+              <th>Processo</th>
+              <th>Tipo de Custas</th>
+              <th class="center">Reimb.</th>
+              <th class="center">Status</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="month-tbody"></tbody>
+        </table>
+        <div id="month-empty" class="empty-state" style="display:none">
+          <div class="empty-icon">📋</div>
+          <div class="empty-title">Nenhum lançamento ainda</div>
+          <div class="empty-sub">Clique em <strong>+ Lançamento</strong> para adicionar o primeiro registro deste mês.</div>
+        </div>
+      </div>
+    </div><!-- /month -->
+
+  </main>
+</div>
+
+<!-- MODAL: ADD MONTH -->
+<div class="modal-overlay" id="modal-addmonth">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="modal-title">Novo Mês</span>
+      <button class="modal-close" onclick="closeModal('modal-addmonth')">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label>Nome do Mês</label>
+        <select id="new-month-name">
+          <option value="">Selecione...</option>
+          <option>JANEIRO</option><option>FEVEREIRO</option><option>MARÇO</option>
+          <option>ABRIL</option><option>MAIO</option><option>JUNHO</option>
+          <option>JULHO</option><option>AGOSTO</option><option>SETEMBRO</option>
+          <option>OUTUBRO</option><option>NOVEMBRO</option><option>DEZEMBRO</option>
+        </select>
+      </div>
+      <div class="form-group" style="margin-top:1rem">
+        <label>Ano</label>
+        <select id="new-month-year">
+          <option>2025</option><option selected>2026</option><option>2027</option>
+        </select>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('modal-addmonth')" style="color:var(--navy); background:transparent; border:1px solid var(--gray-m)">Cancelar</button>
+      <button class="btn btn-gold" onclick="confirmAddMonth()">Criar Mês</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: ADD ENTRY -->
+<div class="modal-overlay" id="modal-addentry">
+  <div class="modal" style="max-width:640px">
+    <div class="modal-header">
+      <span class="modal-title" id="modal-entry-title">Novo Lançamento</span>
+      <button class="modal-close" onclick="closeModal('modal-addentry')">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-grid">
+        <div class="form-group">
+          <label>Mês</label>
+          <select id="entry-month"></select>
+        </div>
+        <div class="form-group">
+          <label>Nº GRERJ / Documento</label>
+          <input type="text" id="entry-grerj" placeholder="Ex: 42835404935-53">
+        </div>
+        <div class="form-group">
+          <label>Data</label>
+          <input type="date" id="entry-date">
+        </div>
+        <div class="form-group">
+          <label>Tipo</label>
+          <select id="entry-tipo">
+            <option value="">—</option>
+            <option>GRERJ</option><option>GRU</option>
+            <option>DEPÓSITO</option><option>CERTIDÃO</option>
+            <option>GUIA TJ</option><option>OUTRO</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Cliente</label>
+          <input type="text" id="entry-cliente" placeholder="Nome do cliente">
+        </div>
+        <div class="form-group">
+          <label>Valor (R$)</label>
+          <input type="number" id="entry-valor" placeholder="0,00" step="0.01" min="0">
+        </div>
+        <div class="form-group full">
+          <label>Processo</label>
+          <input type="text" id="entry-processo" placeholder="Ex: 0098982-61.2011.8.19.0001">
+        </div>
+        <div class="form-group full">
+          <label>Tipo de Custas / Classe</label>
+          <input type="text" id="entry-classe" placeholder="Ex: Apelação, Desarquivamento…">
+        </div>
+        <div class="form-group full">
+          <label>Parte Contrária</label>
+          <input type="text" id="entry-parte" placeholder="Nome da parte contrária">
+        </div>
+        <div class="form-group">
+          <label>Reembolsável</label>
+          <select id="entry-reimb">
+            <option value="">—</option>
+            <option value="SIM">SIM</option>
+            <option value="NÃO">NÃO</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Status</label>
+          <select id="entry-status">
+            <option value="">—</option>
+            <option>PAGO</option>
+            <option>PENDENTE</option>
+            <option>CANCELADO</option>
+          </select>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal('modal-addentry')" style="color:var(--navy); background:transparent; border:1px solid var(--gray-m)">Cancelar</button>
+      <button class="btn btn-gold" onclick="confirmAddEntry()">Salvar Lançamento</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ─────────────────────────────────────────────────────────
+// STATE E CONFIGURAÇÃO DA NUVEM
+// ─────────────────────────────────────────────────────────
+const API_URL = 'https://sheetdb.io/api/v1/6oc4bwsk5wlry';
+
+let state = {
+  months: [],   // [{id, label, entries:[]}]
+  currentMonth: null,
+};
+
+function saveState() {
+  localStorage.setItem('eaz_custas_v2', JSON.stringify(state));
+}
+
+// Load from localStorage, SheetDB or Hardcoded fallback
+async function loadState() {
+  const dadosOriginais = [
+    { id: 'SETEMBRO-25', label: 'SETEMBRO / 2025', entries: [
+      {id:1, grerj:'42835404935-53', date:'2025-09-04', tipo:'GRERJ', cliente:'OSANÁ', valor:85.01, processo:'', classe:'', parte:'', reimb:'', status:''},
+      {id:2, grerj:'42836706009-00', date:'2025-09-05', tipo:'GRERJ', cliente:'CYRELA', valor:1094.31, processo:'0098982-61.2011.8.19.0001', classe:'', parte:'', reimb:'', status:''},
+      {id:3, grerj:'4283580783954', date:'2025-09-05', tipo:'GRERJ', cliente:'EPARK', valor:83.20, processo:'0004522-83.2024.8.19.0209', classe:'', parte:'', reimb:'', status:''},
+      {id:4, grerj:'52834605679-47', date:'2025-09-15', tipo:'GRERJ', cliente:'EPARK', valor:1202.56, processo:'0000414-84.2019.8.19.0209', classe:'', parte:'', reimb:'', status:''},
+      {id:5, grerj:'62838000865-90', date:'2025-09-17', tipo:'GRERJ', cliente:'GLOBO', valor:25.02, processo:'', classe:'', parte:'', reimb:'', status:''},
+      {id:6, grerj:'52831009807-66', date:'2025-09-17', tipo:'GRERJ', cliente:'EPARK', valor:1094.31, processo:'0009085-04.2020.8.19.0002', classe:'', parte:'', reimb:'', status:''},
+      {id:7, grerj:'52831009897-12', date:'2025-09-17', tipo:'GRERJ', cliente:'EPARK', valor:1094.31, processo:'0025275-09.2024.8.19.0000', classe:'', parte:'', reimb:'', status:''},
+      {id:8, grerj:'62838505950-13', date:'2025-09-24', tipo:'GRERJ', cliente:'BOUERI', valor:1700.40, processo:'0216177-18.2021.8.19.0001', classe:'', parte:'', reimb:'', status:''},
+      {id:9, grerj:'72830002283-18', date:'2025-09-30', tipo:'GRERJ', cliente:'GLOBO', valor:14.98, processo:'0000456-31.2022.8.19.0209', classe:'', parte:'', reimb:'', status:''},
+      {id:10, grerj:'72839203455-52', date:'2025-09-30', tipo:'GRERJ', cliente:'ALEXANDRE DUARTE SANTOS', valor:1094.31, processo:'0203118-02.2017.8.19.0001', classe:'', parte:'', reimb:'', status:''},
+    ]},
+    { id: 'OUTUBRO-25', label: 'OUTUBRO / 2025', entries: [
+      {id:1, grerj:'03838003947-28', date:'2025-10-31', tipo:'GRERJ', cliente:'BOUERI', valor:427.57, processo:'0118015-80.2024.8.19.0001', classe:'', parte:'', reimb:'', status:''},
+      {id:2, grerj:'03837003200-61', date:'2025-10-21', tipo:'GRERJ', cliente:'MULTIPLAN', valor:100.08, processo:'0012564-05.2016.8.19.0209', classe:'', parte:'', reimb:'', status:''},
+      {id:3, grerj:'72839804744-19', date:'2025-10-02', tipo:'GRERJ', cliente:'MULTIPLAN', valor:400.03, processo:'0012564-05.2016.8.19.0209', classe:'consultas', parte:'', reimb:'', status:''},
+      {id:4, grerj:'3836600498-62', date:'2025-10-29', tipo:'GRERJ', cliente:'BOUERI', valor:361.74, processo:'0944292-66.2025.8.19.0001', classe:'', parte:'', reimb:'', status:''},
+      {id:5, grerj:'92837405403-55', date:'2025-10-23', tipo:'GRERJ', cliente:'CIANO', valor:1094.31, processo:'', classe:'', parte:'', reimb:'', status:''},
+      {id:6, grerj:'92835405863-02', date:'2025-10-23', tipo:'GRERJ', cliente:'BOUERI', valor:1094.31, processo:'0225743-59.2019.8.19.0001', classe:'', parte:'', reimb:'', status:''},
+      {id:7, grerj:'82832008098-16', date:'2025-10-15', tipo:'GRERJ', cliente:'RODO PETRO', valor:1202.56, processo:'0947772-52.2025.8.19.001', classe:'', parte:'', reimb:'', status:''},
+      {id:8, grerj:'82831300476-01', date:'2025-10-08', tipo:'GRERJ', cliente:'BOUERI', valor:1094.31, processo:'0013427-53.2015.8.19.0028', classe:'', parte:'', reimb:'', status:''},
+    ]},
+    { id: 'NOVEMBRO-25', label: 'NOVEMBRO / 2025', entries: [
+      {id:1, grerj:'', date:'2025-11-05', tipo:'GRERJ', cliente:'CEDAE', valor:1374.05, processo:'', classe:'Agravo de Instrumento', parte:'', reimb:'SIM', status:''},
+      {id:2, grerj:'', date:'2025-11-10', tipo:'GRERJ', cliente:'BOUERI', valor:427.57, processo:'0118015-80.2024.8.19.0001', classe:'', parte:'', reimb:'', status:''},
+      {id:3, grerj:'', date:'2025-11-12', tipo:'GRERJ', cliente:'MULTIPLAN', valor:1250.38, processo:'0012564-05.2016.8.19.0209', classe:'Apelação', parte:'', reimb:'', status:'PAGO'},
+      {id:4, grerj:'', date:'2025-11-20', tipo:'GRERJ', cliente:'CEDAE', valor:558.78, processo:'', classe:'Impugnação', parte:'', reimb:'SIM', status:'PAGO'},
+    ]},
+    { id: 'DEZEMBRO-25', label: 'DEZEMBRO / 2025', entries: [
+      {id:1, grerj:'', date:'2025-12-10', tipo:'GRERJ', cliente:'BOUERI', valor:75.06, processo:'', classe:'Penhora On Line', parte:'', reimb:'NÃO', status:'PAGO'},
+      {id:2, grerj:'', date:'2025-12-15', tipo:'GRU', cliente:'CEDAE', valor:15.82, processo:'', classe:'', parte:'', reimb:'', status:''},
+    ]},
+    { id: 'JANEIRO-26', label: 'JANEIRO / 2026', entries: [
+      {id:1, grerj:'10930809683-71', date:'2026-01-21', tipo:'GRERJ', cliente:'BOUERI/GLINT', valor:171.20, processo:'3065020-05.2025.8.19.0001', classe:'Complementação de custas', parte:'SANDRA REGINA VITORINA E OUTROS', reimb:'', status:''},
+      {id:2, grerj:'20930901952-03', date:'2026-01-21', tipo:'GRERJ', cliente:'SOTER', valor:32.72, processo:'0003397-18.2007.8.19.0002', classe:'Expedição de Ofício ao RGI', parte:'CHARITAS AEROCLUBE E OUTROS', reimb:'', status:''},
+      {id:3, grerj:'10934709637-33', date:'2026-01-21', tipo:'GRERJ', cliente:'CEDAE', valor:87.46, processo:'', classe:'', parte:'', reimb:'', status:''},
+      {id:4, grerj:'10935709634-07', date:'2026-01-21', tipo:'GRERJ', cliente:'CEDAE', valor:1250.38, processo:'', classe:'', parte:'', reimb:'', status:'PAGO'},
+      {id:5, grerj:'20934901574-65', date:'2026-01-22', tipo:'GRERJ', cliente:'', valor:28.58, processo:'0005616-06.2008.8.19.0087', classe:'Mandado de PG Penhora', parte:'', reimb:'NÃO', status:''},
+      {id:6, grerj:'20939307288-31', date:'2026-01-28', tipo:'GRERJ', cliente:'BENNET', valor:1134.05, processo:'', classe:'', parte:'', reimb:'', status:''},
+      {id:7, grerj:'20931407608-96', date:'2026-01-28', tipo:'GRERJ', cliente:'ADALGISO', valor:810.67, processo:'0839408-57.2024.8.19.0021', classe:'Contestação denunciação da lide', parte:'', reimb:'', status:''},
+      {id:8, grerj:'20937508367-79', date:'2026-01-29', tipo:'GRERJ', cliente:'GLOBO', valor:1250.38, processo:'0004978-13.2019.8.19.0046', classe:'', parte:'', reimb:'', status:''},
+    ]},
+    { id: 'FEVEREIRO-26', label: 'FEVEREIRO / 2026', entries: [
+      {id:1, grerj:'30939803763-50', date:'2026-02-03', tipo:'GRERJ', cliente:'LAGRA', valor:1250.38, processo:'', classe:'Apelação', parte:'', reimb:'', status:''},
+      {id:2, grerj:'30935005582-50', date:'2026-02-05', tipo:'GRERJ', cliente:'BOUERI', valor:114.32, processo:'0043448-40.2008.8.19.0001', classe:'Consultas', parte:'', reimb:'', status:''},
+      {id:3, grerj:'30937106593-27', date:'2026-02-06', tipo:'GRERJ', cliente:'VINICIUS BARILE', valor:94.87, processo:'0034905-83.2020.8.19.0209', classe:'', parte:'', reimb:'', status:''},
+      {id:4, grerj:'30939700825-81', date:'2026-02-02', tipo:'GRERJ', cliente:'CEDAE', valor:1374.05, processo:'0323105-08.2012.8.19.0001', classe:'Agravo de Instrumento', parte:'CONDOMINIO LARGO DA CARIOCA', reimb:'', status:''},
+      {id:5, grerj:'30933803261-98', date:'2026-02-03', tipo:'GRERJ', cliente:'CEDAE', valor:1250.38, processo:'0003270-92.2021.8.19.0001', classe:'Apelação', parte:'RESTAURANTE MOSTEIRO LTDA', reimb:'', status:''},
+      {id:6, grerj:'30937803904-36', date:'2026-02-03', tipo:'GRERJ', cliente:'CEDAE', valor:1250.38, processo:'0243124-51.2017.8.19.0001', classe:'Recurso Especial', parte:'LUIZ DE FREITAS MACHADO NETO', reimb:'', status:''},
+      {id:7, grerj:'20937609790-02', date:'2026-02-03', tipo:'GRERJ', cliente:'CEDAE', valor:558.72, processo:'0005314-13.2019.8.19.0209', classe:'Impugnação', parte:'ESPÓLIO DE PAULO CESAR', reimb:'', status:''},
+      {id:8, grerj:'20935206905-95', date:'2026-02-04', tipo:'GRERJ', cliente:'CEDAE', valor:1374.05, processo:'0143897-74.2006.8.19.0001', classe:'Agravo de Instrumento', parte:'CONDOMINIO ESPLANADA', reimb:'', status:''},
+    ]},
+    { id: 'MARÇO-26', label: 'MARÇO / 2026', entries: [
+      {id:1, grerj:'70930200635-63', date:'2026-03-10', tipo:'GRERJ', cliente:'FIDC POLO', valor:1374.05, processo:'3029567-12.2026.8.19.0001', classe:'', parte:'', reimb:'NÃO', status:''},
+      {id:2, grerj:'70933402809-82', date:'2026-03-13', tipo:'GRERJ', cliente:'Top birra e Rio Coura', valor:210.45, processo:'3030507-74.2026.8.19.0001', classe:'', parte:'', reimb:'', status:''},
+      {id:3, grerj:'50930004440-40', date:'2026-03-10', tipo:'GRERJ', cliente:'CEDAE', valor:32.72, processo:'0137640-76.2019.8.19.0001', classe:'Expedição de Ofício ao BB', parte:'CONDOMÍNIO IASA II', reimb:'SIM', status:''},
+      {id:4, grerj:'50933408780-53', date:'2026-03-02', tipo:'GRERJ', cliente:'CEDAE', valor:1250.38, processo:'0013554-36.2020.8.19.0021', classe:'Recurso Especial', parte:'OSMARINO COUTO FERNANDES', reimb:'SIM', status:''},
+      {id:5, grerj:'60930501953-77', date:'2026-03-05', tipo:'GRERJ', cliente:'CEDAE', valor:87.46, processo:'0021958-02.2015.8.19.0070', classe:'Desarquivamento', parte:'CLAUDIO CABRAL RIBEIRO', reimb:'SIM', status:''},
+      {id:6, grerj:'60931501662-97', date:'2026-03-02', tipo:'GRERJ', cliente:'CEDAE', valor:1374.05, processo:'3022369-21.2026.8.19.0001', classe:'Agravo de Instrumento', parte:'AEGEA', reimb:'SIM', status:''},
+    ]},
+  ];
+
+  // Tenta ver se a planilha tem dados
+  try {
+    const response = await fetch(API_URL);
+    const data = await response.json();
+
+    if (data && data.length > 0 && data[0].mes_id) {
+       // Se tiver, usa a planilha
+       const monthsMap = {};
+       data.forEach(row => {
+         if (!row.mes_id) return;
+         if (!monthsMap[row.mes_id]) {
+           const parts = row.mes_id.split('-');
+           const label = parts.length === 2 ? `${parts[0]} / 20${parts[1]}` : row.mes_id;
+           monthsMap[row.mes_id] = { id: row.mes_id, label: label, entries: [] };
+         }
+         if (row.grerj || row.cliente || row.valor) {
+           monthsMap[row.mes_id].entries.push({
+             id: parseInt(row.id),
+             grerj: row.grerj || '',
+             date: row.data || '',
+             tipo: row.tipo || '',
+             cliente: row.cliente || '',
+             valor: parseFloat(row.valor) || 0,
+             processo: row.processo || '',
+             classe: row.classe || '',
+             parte: row.parte || '',
+             reimb: row.reembolsavel || '',
+             status: row.status || ''
+           });
+         }
+       });
+       state.months = Object.values(monthsMap);
+       return;
+    }
+  } catch(e) { console.log("Erro na nuvem, usando fallback."); }
+
+  // Se a planilha estiver vazia, carrega seus dados fixos/locais
+  const saved = localStorage.getItem('eaz_custas_v2');
+  if (saved) {
+    state = JSON.parse(saved);
+  } else {
+    state.months = dadosOriginais;
+  }
+}
+
+// ─────────────────────────────────────────────────────────
+// FORMATTING
+// ─────────────────────────────────────────────────────────
+function formatBRL(v) {
+  if (!v && v !== 0) return '—';
+  return new Intl.NumberFormat('pt-BR', {style:'currency', currency:'BRL'}).format(v);
+}
+function formatDate(d) {
+  if (!d) return '—';
+  const [y,m,day] = d.split('-');
+  return `${day}/${m}/${y}`;
+}
+function tipoBadge(tipo) {
+  if (!tipo) return '<span class="badge badge-gray">—</span>';
+  const cls = tipo==='GRERJ'?'tipo-grerj':tipo==='GRU'?'tipo-gru':tipo==='DEPÓSITO'?'tipo-dep':tipo==='CERTIDÃO'||tipo==='CERTIDAO'?'tipo-cert':'tipo-other';
+  return `<span class="badge ${cls}">${tipo}</span>`;
+}
+function reimbBadge(r) {
+  if (!r) return '<span class="badge badge-gray">—</span>';
+  return r==='SIM'?`<span class="badge chip-reimb">SIM</span>`:`<span class="badge chip-nreimb">NÃO</span>`;
+}
+function statusBadge(s) {
+  if (!s) return '<span style="color:var(--gray-d);font-size:0.75rem">—</span>';
+  if (s==='PAGO') return `<span class="badge badge-green">PAGO</span>`;
+  if (s==='CANCELADO') return `<span class="badge badge-red">CANC.</span>`;
+  return `<span class="badge badge-orange">${s}</span>`;
+}
+
+// ─────────────────────────────────────────────────────────
+// RENDER
+// ─────────────────────────────────────────────────────────
+function renderSidebar() {
+  const el = document.getElementById('month-tabs');
+  el.innerHTML = state.months.map(m => {
+    const total = m.entries.reduce((s,e) => s + (parseFloat(e.valor)||0), 0);
+    const active = state.currentMonth === m.id ? 'active' : '';
+    return `<div class="month-tab ${active}" onclick="showMonth('${m.id}')">
+      <span class="month-tab-name">${m.label.replace(' / ','\n').split('\n')[0].split(' ')[0]}<br><small style="font-size:0.7rem;opacity:0.6">${m.label.split('/')[1]?.trim()||''}</small></span>
+      <span class="month-tab-total">${formatBRL(total)}</span>
+    </div>`;
+  }).join('');
+}
+
+function renderResumo() {
+  let grandTotal = 0, grandCount = 0;
+  let grandReimb = 0, grandNReimb = 0;
+  let maxMonth = null, maxVal = 0;
+  let prevTotal = null;
+
+  const rows = state.months.map(m => {
+    const total = m.entries.reduce((s,e) => s+(parseFloat(e.valor)||0),0);
+    const reimb = m.entries.filter(e=>e.reimb==='SIM').reduce((s,e)=>s+(parseFloat(e.valor)||0),0);
+    const nreimb = m.entries.filter(e=>e.reimb==='NÃO' || e.reimb==='NAO').reduce((s,e)=>s+(parseFloat(e.valor)||0),0);
+    grandTotal += total; grandCount += m.entries.length;
+    grandReimb += reimb; grandNReimb += nreimb;
+    if (total > maxVal) { maxVal = total; maxMonth = m.label; }
+
+    let varHtml = '<span style="color:var(--gray-d)">—</span>';
+    if (prevTotal !== null && prevTotal > 0 && total > 0) {
+      const pct = ((total-prevTotal)/prevTotal*100);
+      varHtml = pct >= 0
+        ? `<span class="var-up">▲ ${pct.toFixed(1)}%</span>`
+        : `<span class="var-down">▼ ${Math.abs(pct).toFixed(1)}%</span>`;
+    }
+    if (total > 0) prevTotal = total;
+
+    return `<tr onclick="showMonth('${m.id}')" style="cursor:pointer">
+      <td><strong>${m.label}</strong></td>
+      <td class="right mono">${m.entries.length}</td>
+      <td class="right"><strong>${formatBRL(total)}</strong></td>
+      <td class="right" style="color:var(--green)">${reimb>0?formatBRL(reimb):'—'}</td>
+      <td class="right" style="color:var(--red)">${nreimb>0?formatBRL(nreimb):'—'}</td>
+      <td class="center">${varHtml}</td>
+    </tr>`;
+  }).join('');
+
+  document.getElementById('resumo-tbody').innerHTML = rows;
+  document.getElementById('stat-total').textContent = formatBRL(grandTotal);
+  document.getElementById('stat-count').textContent = `${grandCount} lançamento${grandCount!==1?'s':''}`;
+  document.getElementById('stat-months').textContent = state.months.length;
+  document.getElementById('stat-last').textContent = state.months.length ? `Último: ${state.months[state.months.length-1].label}` : '—';
+  document.getElementById('stat-max').textContent = maxMonth ? maxMonth.split('/')[0].trim() : '—';
+  document.getElementById('stat-max-val').textContent = formatBRL(maxVal);
+  document.getElementById('tfoot-count').textContent = grandCount;
+  document.getElementById('tfoot-total').textContent = formatBRL(grandTotal);
+  document.getElementById('tfoot-reimb').textContent = formatBRL(grandReimb);
+  document.getElementById('tfoot-nreimb').textContent = formatBRL(grandNReimb);
+}
+
+function renderMonthTable(filter='') {
+  const m = state.months.find(m=>m.id===state.currentMonth);
+  if (!m) return;
+
+  const total = m.entries.reduce((s,e)=>s+(parseFloat(e.valor)||0),0);
+  document.getElementById('month-title-display').textContent = m.label;
+  document.getElementById('month-meta-display').textContent = `${m.entries.length} lançamentos`;
+  document.getElementById('month-total-display').textContent = formatBRL(total);
+
+  const flt = filter.toLowerCase();
+  const filtered = m.entries.filter(e =>
+    !flt || [e.cliente,e.processo,e.classe,e.parte,e.grerj].some(v=>(v||'').toLowerCase().includes(flt))
+  );
+
+  const tbody = document.getElementById('month-tbody');
+  const empty = document.getElementById('month-empty');
+  if (m.entries.length === 0) { tbody.innerHTML=''; empty.style.display=''; return; }
+  empty.style.display = 'none';
+
+  tbody.innerHTML = filtered.map((e,i) => `
+    <tr data-id="${e.id}">
+      <td class="mono" style="font-size:0.72rem">${e.grerj||'—'}</td>
+      <td class="mono" style="font-size:0.78rem">${formatDate(e.date)}</td>
+      <td class="center">${tipoBadge(e.tipo)}</td>
+      <td><strong>${e.cliente||'—'}</strong></td>
+      <td class="right"><strong>${formatBRL(parseFloat(e.valor)||0)}</strong></td>
+      <td class="mono" style="font-size:0.72rem;color:var(--gray-d)">${e.processo||'—'}</td>
+      <td style="font-size:0.8rem">${e.classe||'—'}</td>
+      <td class="center">${reimbBadge(e.reimb)}</td>
+      <td class="center">${statusBadge(e.status)}</td>
+      <td><button class="row-delete" onclick="deleteEntry('${m.id}',${e.id},event)" title="Excluir">✕</button></td>
+    </tr>
+  `).join('');
+}
+
+// ─────────────────────────────────────────────────────────
+// PAGE NAV
+// ─────────────────────────────────────────────────────────
+function showPage(page) {
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.month-tab').forEach(t=>t.classList.remove('active'));
+
+  if (page === 'resumo') {
+    document.getElementById('page-resumo').classList.add('active');
+    document.getElementById('sidebar-resumo').classList.add('active');
+    state.currentMonth = null;
+    renderResumo();
+  }
+  renderSidebar();
+}
+
+function showMonth(id) {
+  state.currentMonth = id;
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.getElementById('page-month').classList.add('active');
+  document.getElementById('month-filter').value = '';
+  renderMonthTable();
+  renderSidebar();
+}
+
+function filterTable() {
+  renderMonthTable(document.getElementById('month-filter').value);
+}
+
+// ─────────────────────────────────────────────────────────
+// MODALS
+// ─────────────────────────────────────────────────────────
+function openModal(id) { document.getElementById(id).classList.add('open'); }
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+
+document.querySelectorAll('.modal-overlay').forEach(m => {
+  m.addEventListener('click', e => { if (e.target === m) m.classList.remove('open'); });
+});
+
+function openAddMonth() { openModal('modal-addmonth'); }
+
+async function confirmAddMonth() {
+  const name = document.getElementById('new-month-name').value;
+  const year = document.getElementById('new-month-year').value;
+  if (!name) { alert('Selecione o mês.'); return; }
+
+  const shortYear = year.slice(2);
+  const id = `${name}-${shortYear}`;
+  if (state.months.find(m=>m.id===id)) { alert('Este mês já existe.'); return; }
+
+  // Salva na tela instantaneamente
+  state.months.push({ id, label: `${name} / ${year}`, entries: [] });
+  saveState();
+  closeModal('modal-addmonth');
+  renderSidebar();
+  renderResumo();
+  showMonth(id);
+
+  // Manda pra nuvem silenciosamente
+  try {
+    await fetch(API_URL, {
+      method: 'POST',
+      headers: { 'Accept': 'application/json', 'Content-Type': 'application/json' },
+      body: JSON.stringify({ data: [{ id: Date.now(), mes_id: id }] })
+    });
+  } catch(e) {}
+}
+
+function openAddEntry() {
+  const sel = document.getElementById('entry-month');
+  sel.innerHTML = state.months.map(m=>`<option value="${m.id}" ${m.id===state.currentMonth?'selected':''}>${m.label}</option>`).join('');
+
+  ['entry-grerj','entry-date','entry-cliente','entry-valor','entry-processo','entry-classe','entry-parte'].forEach(id=>{
+    document.getElementById(id).value='';
+  });
+  ['entry-tipo','entry-reimb','entry-status'].forEach(id=>{
+    document.getElementById(id).value='';
+  });
+
+  document.getElementById('entry-date').value = new Date().toISOString().slice(0,10);
+  openModal('modal-addentry');
+}
+
+async function confirmAddEntry() {
+  const monthId = document.getElementById('entry-month').value;
+  const valor = parseFloat(document.getElementById('entry-valor').value);
+  if (!monthId) { alert('Selecione o mês.'); return; }
+  if (isNaN(valor) || valor <= 0) { alert('Informe um valor válido.'); return; }
+
+  const m = state.months.find(m=>m.id===monthId);
+  if (!m) return;
+
+  const btn = document.querySelector('#modal-addentry .btn-gold');
+  const txtOriginal = btn.textContent;
+  btn.textContent = 'Salvando...';
+
+  const newId = (m.entries.length ? Math.max(...m.entries.map(e=>e.id)) : 0) + 1;
+  const newEntry = {
+    id: newId,
+    grerj: document.getElementById('entry-grerj').value.trim(),
+    date: document.getElementById('entry-date').value,
+    tipo: document.getElementById('entry-tipo').value,
+    cliente: document.getElementById('entry-cliente').value.trim(),
+    valor,
+    processo: document.getElementById('entry-processo').value.trim(),
+    classe: document.getElementById('entry-classe').value.trim(),
+    parte: document.getElementById('entry-parte').value.trim(),
+    reimb: document.getElementById('entry-reimb').value,
+    status: document.getElementById('entry-status').value,
+  };
+
+  // Salva local e atualiza tela
+  m.entries.push(newEntry);
+  saveState();
+  closeModal('modal-addentry');
+  renderSidebar();
+  if (state.currentMonth === monthId) { renderMonthTable(); } else { showMonth(monthId); }
+  renderResumo();
+
+  btn.textContent = txtOriginal;
+
+  // Envia para a nuvem
+  try {
+    await fetch(API_URL, {
+      method: 'POST',
+      headers: { 'Accept': 'application/json', 'Content-Type': 'application/json' },
+      body: JSON.stringify({ data: [{
+        id: newEntry.id, mes_id: monthId, grerj: newEntry.grerj, data: newEntry.date,
+        tipo: newEntry.tipo, cliente: newEntry.cliente, valor: newEntry.valor,
+        processo: newEntry.processo, classe: newEntry.classe, parte: newEntry.parte,
+        reembolsavel: newEntry.reimb, status: newEntry.status
+      }]})
+    });
+  } catch(e) {}
+}
+
+async function deleteEntry(monthId, entryId, evt) {
+  evt.stopPropagation();
+  if (!confirm('Excluir este lançamento?')) return;
+  const m = state.months.find(m=>m.id===monthId);
+  if (!m) return;
+
+  // Deleta local e atualiza tela
+  m.entries = m.entries.filter(e=>e.id!==entryId);
+  saveState();
+  renderMonthTable();
+  renderSidebar();
+  renderResumo();
+
+  // Deleta da nuvem
+  try {
+    await fetch(`${API_URL}/id/${entryId}`, {
+      method: 'DELETE',
+      headers: { 'Accept': 'application/json', 'Content-Type': 'application/json' }
+    });
+  } catch(e) {}
+}
+
+async function openDeleteMonth() {
+  if (!state.currentMonth) return;
+  const m = state.months.find(m=>m.id===state.currentMonth);
+  if (!confirm(`Excluir o mês "${m.label}" e todos os seus ${m.entries.length} lançamentos?`)) return;
+  
+  const monthId = state.currentMonth;
+  
+  // Exclui local e atualiza tela
+  state.months = state.months.filter(month=>month.id!==monthId);
+  state.currentMonth = null;
+  saveState();
+  renderSidebar();
+  showPage('resumo');
+
+  // Exclui da nuvem
+  try {
+    await fetch(`${API_URL}/mes_id/${monthId}`, {
+      method: 'DELETE',
+      headers: { 'Accept': 'application/json', 'Content-Type': 'application/json' }
+    });
+  } catch(e) {}
+}
+
+// ─────────────────────────────────────────────────────────
+// INIT
+// ─────────────────────────────────────────────────────────
+loadState().then(() => {
+  renderSidebar();
+  renderResumo();
+  showPage('resumo');
+});
+</script>
+</body>
+</html>
