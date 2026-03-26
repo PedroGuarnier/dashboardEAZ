@@ -832,131 +832,67 @@
 
 <script>
 // ─────────────────────────────────────────────────────────
-// STATE E CONFIGURAÇÃO DA NUVEM
+// STATE E CONFIGURAÇÃO DA NUVEM (API STRICT MODE)
 // ─────────────────────────────────────────────────────────
-const API_URL = 'https://sheetdb.io/api/v1/6oc4bwsk5wlry';
+const API_URL = 'https://sheetdb.io/api/v1/2udn9s4iopfks';
 
 let state = {
-  months: [],   // [{id, label, entries:[]}]
+  months: [],
   currentMonth: null,
 };
 
-function saveState() {
-  localStorage.setItem('eaz_custas_v2', JSON.stringify(state));
-}
-
-// Load from localStorage, SheetDB or Hardcoded fallback
+// ─────────────────────────────────────────────────────────
+// COMUNICAÇÃO COM A NUVEM
+// ─────────────────────────────────────────────────────────
 async function loadState() {
-  const dadosOriginais = [
-    { id: 'SETEMBRO-25', label: 'SETEMBRO / 2025', entries: [
-      {id:1, grerj:'42835404935-53', date:'2025-09-04', tipo:'GRERJ', cliente:'OSANÁ', valor:85.01, processo:'', classe:'', parte:'', reimb:'', status:''},
-      {id:2, grerj:'42836706009-00', date:'2025-09-05', tipo:'GRERJ', cliente:'CYRELA', valor:1094.31, processo:'0098982-61.2011.8.19.0001', classe:'', parte:'', reimb:'', status:''},
-      {id:3, grerj:'4283580783954', date:'2025-09-05', tipo:'GRERJ', cliente:'EPARK', valor:83.20, processo:'0004522-83.2024.8.19.0209', classe:'', parte:'', reimb:'', status:''},
-      {id:4, grerj:'52834605679-47', date:'2025-09-15', tipo:'GRERJ', cliente:'EPARK', valor:1202.56, processo:'0000414-84.2019.8.19.0209', classe:'', parte:'', reimb:'', status:''},
-      {id:5, grerj:'62838000865-90', date:'2025-09-17', tipo:'GRERJ', cliente:'GLOBO', valor:25.02, processo:'', classe:'', parte:'', reimb:'', status:''},
-      {id:6, grerj:'52831009807-66', date:'2025-09-17', tipo:'GRERJ', cliente:'EPARK', valor:1094.31, processo:'0009085-04.2020.8.19.0002', classe:'', parte:'', reimb:'', status:''},
-      {id:7, grerj:'52831009897-12', date:'2025-09-17', tipo:'GRERJ', cliente:'EPARK', valor:1094.31, processo:'0025275-09.2024.8.19.0000', classe:'', parte:'', reimb:'', status:''},
-      {id:8, grerj:'62838505950-13', date:'2025-09-24', tipo:'GRERJ', cliente:'BOUERI', valor:1700.40, processo:'0216177-18.2021.8.19.0001', classe:'', parte:'', reimb:'', status:''},
-      {id:9, grerj:'72830002283-18', date:'2025-09-30', tipo:'GRERJ', cliente:'GLOBO', valor:14.98, processo:'0000456-31.2022.8.19.0209', classe:'', parte:'', reimb:'', status:''},
-      {id:10, grerj:'72839203455-52', date:'2025-09-30', tipo:'GRERJ', cliente:'ALEXANDRE DUARTE SANTOS', valor:1094.31, processo:'0203118-02.2017.8.19.0001', classe:'', parte:'', reimb:'', status:''},
-    ]},
-    { id: 'OUTUBRO-25', label: 'OUTUBRO / 2025', entries: [
-      {id:1, grerj:'03838003947-28', date:'2025-10-31', tipo:'GRERJ', cliente:'BOUERI', valor:427.57, processo:'0118015-80.2024.8.19.0001', classe:'', parte:'', reimb:'', status:''},
-      {id:2, grerj:'03837003200-61', date:'2025-10-21', tipo:'GRERJ', cliente:'MULTIPLAN', valor:100.08, processo:'0012564-05.2016.8.19.0209', classe:'', parte:'', reimb:'', status:''},
-      {id:3, grerj:'72839804744-19', date:'2025-10-02', tipo:'GRERJ', cliente:'MULTIPLAN', valor:400.03, processo:'0012564-05.2016.8.19.0209', classe:'consultas', parte:'', reimb:'', status:''},
-      {id:4, grerj:'3836600498-62', date:'2025-10-29', tipo:'GRERJ', cliente:'BOUERI', valor:361.74, processo:'0944292-66.2025.8.19.0001', classe:'', parte:'', reimb:'', status:''},
-      {id:5, grerj:'92837405403-55', date:'2025-10-23', tipo:'GRERJ', cliente:'CIANO', valor:1094.31, processo:'', classe:'', parte:'', reimb:'', status:''},
-      {id:6, grerj:'92835405863-02', date:'2025-10-23', tipo:'GRERJ', cliente:'BOUERI', valor:1094.31, processo:'0225743-59.2019.8.19.0001', classe:'', parte:'', reimb:'', status:''},
-      {id:7, grerj:'82832008098-16', date:'2025-10-15', tipo:'GRERJ', cliente:'RODO PETRO', valor:1202.56, processo:'0947772-52.2025.8.19.001', classe:'', parte:'', reimb:'', status:''},
-      {id:8, grerj:'82831300476-01', date:'2025-10-08', tipo:'GRERJ', cliente:'BOUERI', valor:1094.31, processo:'0013427-53.2015.8.19.0028', classe:'', parte:'', reimb:'', status:''},
-    ]},
-    { id: 'NOVEMBRO-25', label: 'NOVEMBRO / 2025', entries: [
-      {id:1, grerj:'', date:'2025-11-05', tipo:'GRERJ', cliente:'CEDAE', valor:1374.05, processo:'', classe:'Agravo de Instrumento', parte:'', reimb:'SIM', status:''},
-      {id:2, grerj:'', date:'2025-11-10', tipo:'GRERJ', cliente:'BOUERI', valor:427.57, processo:'0118015-80.2024.8.19.0001', classe:'', parte:'', reimb:'', status:''},
-      {id:3, grerj:'', date:'2025-11-12', tipo:'GRERJ', cliente:'MULTIPLAN', valor:1250.38, processo:'0012564-05.2016.8.19.0209', classe:'Apelação', parte:'', reimb:'', status:'PAGO'},
-      {id:4, grerj:'', date:'2025-11-20', tipo:'GRERJ', cliente:'CEDAE', valor:558.78, processo:'', classe:'Impugnação', parte:'', reimb:'SIM', status:'PAGO'},
-    ]},
-    { id: 'DEZEMBRO-25', label: 'DEZEMBRO / 2025', entries: [
-      {id:1, grerj:'', date:'2025-12-10', tipo:'GRERJ', cliente:'BOUERI', valor:75.06, processo:'', classe:'Penhora On Line', parte:'', reimb:'NÃO', status:'PAGO'},
-      {id:2, grerj:'', date:'2025-12-15', tipo:'GRU', cliente:'CEDAE', valor:15.82, processo:'', classe:'', parte:'', reimb:'', status:''},
-    ]},
-    { id: 'JANEIRO-26', label: 'JANEIRO / 2026', entries: [
-      {id:1, grerj:'10930809683-71', date:'2026-01-21', tipo:'GRERJ', cliente:'BOUERI/GLINT', valor:171.20, processo:'3065020-05.2025.8.19.0001', classe:'Complementação de custas', parte:'SANDRA REGINA VITORINA E OUTROS', reimb:'', status:''},
-      {id:2, grerj:'20930901952-03', date:'2026-01-21', tipo:'GRERJ', cliente:'SOTER', valor:32.72, processo:'0003397-18.2007.8.19.0002', classe:'Expedição de Ofício ao RGI', parte:'CHARITAS AEROCLUBE E OUTROS', reimb:'', status:''},
-      {id:3, grerj:'10934709637-33', date:'2026-01-21', tipo:'GRERJ', cliente:'CEDAE', valor:87.46, processo:'', classe:'', parte:'', reimb:'', status:''},
-      {id:4, grerj:'10935709634-07', date:'2026-01-21', tipo:'GRERJ', cliente:'CEDAE', valor:1250.38, processo:'', classe:'', parte:'', reimb:'', status:'PAGO'},
-      {id:5, grerj:'20934901574-65', date:'2026-01-22', tipo:'GRERJ', cliente:'', valor:28.58, processo:'0005616-06.2008.8.19.0087', classe:'Mandado de PG Penhora', parte:'', reimb:'NÃO', status:''},
-      {id:6, grerj:'20939307288-31', date:'2026-01-28', tipo:'GRERJ', cliente:'BENNET', valor:1134.05, processo:'', classe:'', parte:'', reimb:'', status:''},
-      {id:7, grerj:'20931407608-96', date:'2026-01-28', tipo:'GRERJ', cliente:'ADALGISO', valor:810.67, processo:'0839408-57.2024.8.19.0021', classe:'Contestação denunciação da lide', parte:'', reimb:'', status:''},
-      {id:8, grerj:'20937508367-79', date:'2026-01-29', tipo:'GRERJ', cliente:'GLOBO', valor:1250.38, processo:'0004978-13.2019.8.19.0046', classe:'', parte:'', reimb:'', status:''},
-    ]},
-    { id: 'FEVEREIRO-26', label: 'FEVEREIRO / 2026', entries: [
-      {id:1, grerj:'30939803763-50', date:'2026-02-03', tipo:'GRERJ', cliente:'LAGRA', valor:1250.38, processo:'', classe:'Apelação', parte:'', reimb:'', status:''},
-      {id:2, grerj:'30935005582-50', date:'2026-02-05', tipo:'GRERJ', cliente:'BOUERI', valor:114.32, processo:'0043448-40.2008.8.19.0001', classe:'Consultas', parte:'', reimb:'', status:''},
-      {id:3, grerj:'30937106593-27', date:'2026-02-06', tipo:'GRERJ', cliente:'VINICIUS BARILE', valor:94.87, processo:'0034905-83.2020.8.19.0209', classe:'', parte:'', reimb:'', status:''},
-      {id:4, grerj:'30939700825-81', date:'2026-02-02', tipo:'GRERJ', cliente:'CEDAE', valor:1374.05, processo:'0323105-08.2012.8.19.0001', classe:'Agravo de Instrumento', parte:'CONDOMINIO LARGO DA CARIOCA', reimb:'', status:''},
-      {id:5, grerj:'30933803261-98', date:'2026-02-03', tipo:'GRERJ', cliente:'CEDAE', valor:1250.38, processo:'0003270-92.2021.8.19.0001', classe:'Apelação', parte:'RESTAURANTE MOSTEIRO LTDA', reimb:'', status:''},
-      {id:6, grerj:'30937803904-36', date:'2026-02-03', tipo:'GRERJ', cliente:'CEDAE', valor:1250.38, processo:'0243124-51.2017.8.19.0001', classe:'Recurso Especial', parte:'LUIZ DE FREITAS MACHADO NETO', reimb:'', status:''},
-      {id:7, grerj:'20937609790-02', date:'2026-02-03', tipo:'GRERJ', cliente:'CEDAE', valor:558.72, processo:'0005314-13.2019.8.19.0209', classe:'Impugnação', parte:'ESPÓLIO DE PAULO CESAR', reimb:'', status:''},
-      {id:8, grerj:'20935206905-95', date:'2026-02-04', tipo:'GRERJ', cliente:'CEDAE', valor:1374.05, processo:'0143897-74.2006.8.19.0001', classe:'Agravo de Instrumento', parte:'CONDOMINIO ESPLANADA', reimb:'', status:''},
-    ]},
-    { id: 'MARÇO-26', label: 'MARÇO / 2026', entries: [
-      {id:1, grerj:'70930200635-63', date:'2026-03-10', tipo:'GRERJ', cliente:'FIDC POLO', valor:1374.05, processo:'3029567-12.2026.8.19.0001', classe:'', parte:'', reimb:'NÃO', status:''},
-      {id:2, grerj:'70933402809-82', date:'2026-03-13', tipo:'GRERJ', cliente:'Top birra e Rio Coura', valor:210.45, processo:'3030507-74.2026.8.19.0001', classe:'', parte:'', reimb:'', status:''},
-      {id:3, grerj:'50930004440-40', date:'2026-03-10', tipo:'GRERJ', cliente:'CEDAE', valor:32.72, processo:'0137640-76.2019.8.19.0001', classe:'Expedição de Ofício ao BB', parte:'CONDOMÍNIO IASA II', reimb:'SIM', status:''},
-      {id:4, grerj:'50933408780-53', date:'2026-03-02', tipo:'GRERJ', cliente:'CEDAE', valor:1250.38, processo:'0013554-36.2020.8.19.0021', classe:'Recurso Especial', parte:'OSMARINO COUTO FERNANDES', reimb:'SIM', status:''},
-      {id:5, grerj:'60930501953-77', date:'2026-03-05', tipo:'GRERJ', cliente:'CEDAE', valor:87.46, processo:'0021958-02.2015.8.19.0070', classe:'Desarquivamento', parte:'CLAUDIO CABRAL RIBEIRO', reimb:'SIM', status:''},
-      {id:6, grerj:'60931501662-97', date:'2026-03-02', tipo:'GRERJ', cliente:'CEDAE', valor:1374.05, processo:'3022369-21.2026.8.19.0001', classe:'Agravo de Instrumento', parte:'AEGEA', reimb:'SIM', status:''},
-    ]},
-  ];
+  document.getElementById('stat-total').textContent = "Carregando a nuvem...";
 
-  // Tenta ver se a planilha tem dados
   try {
     const response = await fetch(API_URL);
+    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
     const data = await response.json();
 
-    if (data && data.length > 0 && data[0].mes_id) {
-       // Se tiver, usa a planilha
-       const monthsMap = {};
-       data.forEach(row => {
-         if (!row.mes_id) return;
-         if (!monthsMap[row.mes_id]) {
-           const parts = row.mes_id.split('-');
-           const label = parts.length === 2 ? `${parts[0]} / 20${parts[1]}` : row.mes_id;
-           monthsMap[row.mes_id] = { id: row.mes_id, label: label, entries: [] };
-         }
-         if (row.grerj || row.cliente || row.valor) {
-           monthsMap[row.mes_id].entries.push({
-             id: parseInt(row.id),
-             grerj: row.grerj || '',
-             date: row.data || '',
-             tipo: row.tipo || '',
-             cliente: row.cliente || '',
-             valor: parseFloat(row.valor) || 0,
-             processo: row.processo || '',
-             classe: row.classe || '',
-             parte: row.parte || '',
-             reimb: row.reembolsavel || '',
-             status: row.status || ''
-           });
-         }
-       });
-       state.months = Object.values(monthsMap);
-       return;
-    }
-  } catch(e) { console.log("Erro na nuvem, usando fallback."); }
+    const monthsMap = {};
+    
+    data.forEach(row => {
+      if (!row.mes_id) return; // Ignora linhas em branco
+      
+      if (!monthsMap[row.mes_id]) {
+        const parts = row.mes_id.split('-');
+        const label = parts.length === 2 ? `${parts[0]} / 20${parts[1]}` : row.mes_id;
+        monthsMap[row.mes_id] = { id: row.mes_id, label: label, entries: [] };
+      }
+      
+      if (row.grerj || row.cliente || row.valor) {
+        monthsMap[row.mes_id].entries.push({
+          id: parseInt(row.id),
+          grerj: row.grerj || '',
+          date: row.data || '',
+          tipo: row.tipo || '',
+          cliente: row.cliente || '',
+          valor: parseFloat(row.valor) || 0,
+          processo: row.processo || '',
+          classe: row.classe || '',
+          parte: row.parte || '',
+          reimb: row.reembolsavel || '',
+          status: row.status || ''
+        });
+      }
+    });
 
-  // Se a planilha estiver vazia, carrega seus dados fixos/locais
-  const saved = localStorage.getItem('eaz_custas_v2');
-  if (saved) {
-    state = JSON.parse(saved);
-  } else {
-    state.months = dadosOriginais;
+    state.months = Object.values(monthsMap);
+    renderSidebar();
+    renderResumo();
+    if (state.currentMonth) showMonth(state.currentMonth);
+
+  } catch (error) {
+    console.error("Falha ao puxar dados da API:", error);
+    alert('Erro de conexão. O painel não conseguiu ler a planilha do Google.');
   }
 }
 
 // ─────────────────────────────────────────────────────────
-// FORMATTING
+// FORMATTING & RENDER
 // ─────────────────────────────────────────────────────────
 function formatBRL(v) {
   if (!v && v !== 0) return '—';
@@ -965,27 +901,25 @@ function formatBRL(v) {
 function formatDate(d) {
   if (!d) return '—';
   const [y,m,day] = d.split('-');
+  if(!day) return d;
   return `${day}/${m}/${y}`;
 }
 function tipoBadge(tipo) {
   if (!tipo) return '<span class="badge badge-gray">—</span>';
-  const cls = tipo==='GRERJ'?'tipo-grerj':tipo==='GRU'?'tipo-gru':tipo==='DEPÓSITO'?'tipo-dep':tipo==='CERTIDÃO'||tipo==='CERTIDAO'?'tipo-cert':'tipo-other';
+  const cls = tipo.toUpperCase()==='GRERJ'?'tipo-grerj':tipo.toUpperCase()==='GRU'?'tipo-gru':tipo.toUpperCase()==='DEPÓSITO'?'tipo-dep':tipo.toUpperCase().includes('CERTID')?'tipo-cert':'tipo-other';
   return `<span class="badge ${cls}">${tipo}</span>`;
 }
 function reimbBadge(r) {
   if (!r) return '<span class="badge badge-gray">—</span>';
-  return r==='SIM'?`<span class="badge chip-reimb">SIM</span>`:`<span class="badge chip-nreimb">NÃO</span>`;
+  return r.toUpperCase()==='SIM'?`<span class="badge chip-reimb">SIM</span>`:`<span class="badge chip-nreimb">NÃO</span>`;
 }
 function statusBadge(s) {
   if (!s) return '<span style="color:var(--gray-d);font-size:0.75rem">—</span>';
-  if (s==='PAGO') return `<span class="badge badge-green">PAGO</span>`;
-  if (s==='CANCELADO') return `<span class="badge badge-red">CANC.</span>`;
+  if (s.toUpperCase()==='PAGO') return `<span class="badge badge-green">PAGO</span>`;
+  if (s.toUpperCase()==='CANCELADO') return `<span class="badge badge-red">CANC.</span>`;
   return `<span class="badge badge-orange">${s}</span>`;
 }
 
-// ─────────────────────────────────────────────────────────
-// RENDER
-// ─────────────────────────────────────────────────────────
 function renderSidebar() {
   const el = document.getElementById('month-tabs');
   el.innerHTML = state.months.map(m => {
@@ -1006,8 +940,8 @@ function renderResumo() {
 
   const rows = state.months.map(m => {
     const total = m.entries.reduce((s,e) => s+(parseFloat(e.valor)||0),0);
-    const reimb = m.entries.filter(e=>e.reimb==='SIM').reduce((s,e)=>s+(parseFloat(e.valor)||0),0);
-    const nreimb = m.entries.filter(e=>e.reimb==='NÃO' || e.reimb==='NAO').reduce((s,e)=>s+(parseFloat(e.valor)||0),0);
+    const reimb = m.entries.filter(e=>e.reimb.toUpperCase()==='SIM').reduce((s,e)=>s+(parseFloat(e.valor)||0),0);
+    const nreimb = m.entries.filter(e=>e.reimb.toUpperCase()==='NÃO' || e.reimb.toUpperCase()==='NAO').reduce((s,e)=>s+(parseFloat(e.valor)||0),0);
     grandTotal += total; grandCount += m.entries.length;
     grandReimb += reimb; grandNReimb += nreimb;
     if (total > maxVal) { maxVal = total; maxMonth = m.label; }
@@ -1015,9 +949,7 @@ function renderResumo() {
     let varHtml = '<span style="color:var(--gray-d)">—</span>';
     if (prevTotal !== null && prevTotal > 0 && total > 0) {
       const pct = ((total-prevTotal)/prevTotal*100);
-      varHtml = pct >= 0
-        ? `<span class="var-up">▲ ${pct.toFixed(1)}%</span>`
-        : `<span class="var-down">▼ ${Math.abs(pct).toFixed(1)}%</span>`;
+      varHtml = pct >= 0 ? `<span class="var-up">▲ ${pct.toFixed(1)}%</span>` : `<span class="var-down">▼ ${Math.abs(pct).toFixed(1)}%</span>`;
     }
     if (total > 0) prevTotal = total;
 
@@ -1109,7 +1041,7 @@ function filterTable() {
 }
 
 // ─────────────────────────────────────────────────────────
-// MODALS
+// MODALS & CRUD
 // ─────────────────────────────────────────────────────────
 function openModal(id) { document.getElementById(id).classList.add('open'); }
 function closeModal(id) { document.getElementById(id).classList.remove('open'); }
@@ -1129,34 +1061,39 @@ async function confirmAddMonth() {
   const id = `${name}-${shortYear}`;
   if (state.months.find(m=>m.id===id)) { alert('Este mês já existe.'); return; }
 
-  // Salva na tela instantaneamente
-  state.months.push({ id, label: `${name} / ${year}`, entries: [] });
-  saveState();
-  closeModal('modal-addmonth');
-  renderSidebar();
-  renderResumo();
-  showMonth(id);
+  const btn = document.querySelector('#modal-addmonth .btn-gold');
+  const txtOriginal = btn.textContent;
+  btn.textContent = 'Criando na nuvem...';
+  btn.disabled = true;
 
-  // Manda pra nuvem silenciosamente
   try {
-    await fetch(API_URL, {
+    const response = await fetch(API_URL, {
       method: 'POST',
       headers: { 'Accept': 'application/json', 'Content-Type': 'application/json' },
       body: JSON.stringify({ data: [{ id: Date.now(), mes_id: id }] })
     });
-  } catch(e) {}
+    if (!response.ok) throw new Error("Erro no POST");
+    
+    state.months.push({ id, label: `${name} / ${year}`, entries: [] });
+    closeModal('modal-addmonth');
+    renderSidebar();
+    renderResumo();
+    showMonth(id);
+  } catch (e) {
+    console.error(e);
+    alert('A API rejeitou a criação. Verifique os cabeçalhos da planilha.');
+  } finally {
+    btn.textContent = txtOriginal;
+    btn.disabled = false;
+  }
 }
 
 function openAddEntry() {
   const sel = document.getElementById('entry-month');
   sel.innerHTML = state.months.map(m=>`<option value="${m.id}" ${m.id===state.currentMonth?'selected':''}>${m.label}</option>`).join('');
 
-  ['entry-grerj','entry-date','entry-cliente','entry-valor','entry-processo','entry-classe','entry-parte'].forEach(id=>{
-    document.getElementById(id).value='';
-  });
-  ['entry-tipo','entry-reimb','entry-status'].forEach(id=>{
-    document.getElementById(id).value='';
-  });
+  ['entry-grerj','entry-date','entry-cliente','entry-valor','entry-processo','entry-classe','entry-parte'].forEach(id=>{ document.getElementById(id).value=''; });
+  ['entry-tipo','entry-reimb','entry-status'].forEach(id=>{ document.getElementById(id).value=''; });
 
   document.getElementById('entry-date').value = new Date().toISOString().slice(0,10);
   openModal('modal-addentry');
@@ -1173,9 +1110,10 @@ async function confirmAddEntry() {
 
   const btn = document.querySelector('#modal-addentry .btn-gold');
   const txtOriginal = btn.textContent;
-  btn.textContent = 'Salvando...';
+  btn.textContent = 'Enviando para o Google Sheets...';
+  btn.disabled = true;
 
-  const newId = (m.entries.length ? Math.max(...m.entries.map(e=>e.id)) : 0) + 1;
+  const newId = Date.now(); // Usando timestamp como ID único seguro
   const newEntry = {
     id: newId,
     grerj: document.getElementById('entry-grerj').value.trim(),
@@ -1190,19 +1128,8 @@ async function confirmAddEntry() {
     status: document.getElementById('entry-status').value,
   };
 
-  // Salva local e atualiza tela
-  m.entries.push(newEntry);
-  saveState();
-  closeModal('modal-addentry');
-  renderSidebar();
-  if (state.currentMonth === monthId) { renderMonthTable(); } else { showMonth(monthId); }
-  renderResumo();
-
-  btn.textContent = txtOriginal;
-
-  // Envia para a nuvem
   try {
-    await fetch(API_URL, {
+    const response = await fetch(API_URL, {
       method: 'POST',
       headers: { 'Accept': 'application/json', 'Content-Type': 'application/json' },
       body: JSON.stringify({ data: [{
@@ -1212,62 +1139,85 @@ async function confirmAddEntry() {
         reembolsavel: newEntry.reimb, status: newEntry.status
       }]})
     });
-  } catch(e) {}
+
+    if (!response.ok) throw new Error("A nuvem negou a gravação.");
+
+    // Atualiza a tela APENAS se tiver ido pra nuvem com sucesso
+    m.entries.push(newEntry);
+    closeModal('modal-addentry');
+    renderSidebar();
+    if (state.currentMonth === monthId) { renderMonthTable(); } else { showMonth(monthId); }
+    renderResumo();
+
+  } catch(e) {
+    console.error(e);
+    alert("Erro crítico: Os dados não foram salvos na planilha. Inspecione o erro no console (F12).");
+  } finally {
+    btn.textContent = txtOriginal;
+    btn.disabled = false;
+  }
 }
 
 async function deleteEntry(monthId, entryId, evt) {
   evt.stopPropagation();
-  if (!confirm('Excluir este lançamento?')) return;
+  if (!confirm('Isso vai apagar da planilha do Google. Confirmar?')) return;
   const m = state.months.find(m=>m.id===monthId);
   if (!m) return;
 
-  // Deleta local e atualiza tela
-  m.entries = m.entries.filter(e=>e.id!==entryId);
-  saveState();
-  renderMonthTable();
-  renderSidebar();
-  renderResumo();
+  const rowBtn = evt.target;
+  rowBtn.textContent = '⏳';
 
-  // Deleta da nuvem
   try {
-    await fetch(`${API_URL}/id/${entryId}`, {
+    const response = await fetch(`${API_URL}/id/${entryId}`, {
       method: 'DELETE',
       headers: { 'Accept': 'application/json', 'Content-Type': 'application/json' }
     });
-  } catch(e) {}
+    if (!response.ok) throw new Error("Falha no DELETE");
+
+    m.entries = m.entries.filter(e=>e.id!==entryId);
+    renderMonthTable();
+    renderSidebar();
+    renderResumo();
+  } catch(e) {
+    console.error(e);
+    alert("Erro ao excluir no banco de dados.");
+    rowBtn.textContent = '✕';
+  }
 }
 
 async function openDeleteMonth() {
   if (!state.currentMonth) return;
   const m = state.months.find(m=>m.id===state.currentMonth);
-  if (!confirm(`Excluir o mês "${m.label}" e todos os seus ${m.entries.length} lançamentos?`)) return;
+  if (!confirm(`Excluir o mês "${m.label}" e todos os seus ${m.entries.length} lançamentos do Banco de Dados?`)) return;
   
   const monthId = state.currentMonth;
-  
-  // Exclui local e atualiza tela
-  state.months = state.months.filter(month=>month.id!==monthId);
-  state.currentMonth = null;
-  saveState();
-  renderSidebar();
-  showPage('resumo');
+  const btn = document.querySelector('.month-toolbar .btn-outline');
+  const txtOriginal = btn.textContent;
+  btn.textContent = 'Deletando na nuvem...';
 
-  // Exclui da nuvem
   try {
-    await fetch(`${API_URL}/mes_id/${monthId}`, {
+    const response = await fetch(`${API_URL}/mes_id/${monthId}`, {
       method: 'DELETE',
       headers: { 'Accept': 'application/json', 'Content-Type': 'application/json' }
     });
-  } catch(e) {}
+    if (!response.ok) throw new Error("Falha no DELETE do mês");
+
+    state.months = state.months.filter(month=>month.id!==monthId);
+    state.currentMonth = null;
+    renderSidebar();
+    showPage('resumo');
+  } catch(e) {
+    console.error(e);
+    alert("Erro ao excluir o mês na planilha.");
+  } finally {
+    if (btn) btn.textContent = txtOriginal;
+  }
 }
 
 // ─────────────────────────────────────────────────────────
 // INIT
 // ─────────────────────────────────────────────────────────
-loadState().then(() => {
-  renderSidebar();
-  renderResumo();
-  showPage('resumo');
-});
+loadState();
 </script>
 </body>
 </html>
