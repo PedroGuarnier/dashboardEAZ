@@ -5,6 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Custas Diárias — EAZ</title>
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;0,700;1,400;1,600&family=DM+Mono:wght@300;400;500&family=Libre+Baskerville:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
 <style>
   :root {
     --navy: #0D1B2A;
@@ -115,6 +117,14 @@
     font-size: 0.7rem;
     padding: 0.3rem 0.7rem;
   }
+  .btn-pdf {
+    background: transparent;
+    color: rgba(201,168,76,0.85);
+    border: 1px solid rgba(201,168,76,0.4);
+    font-size: 0.7rem;
+    padding: 0.3rem 0.7rem;
+  }
+  .btn-pdf:hover { background: rgba(201,168,76,0.1); color: var(--gold); }
 
   /* ─── LAYOUT ─────────────────────────────────────────── */
   .layout {
@@ -214,7 +224,7 @@
     overflow: hidden;
   }
 
-  /* ─── PAGE: RESUMO ───────────────────────────────────── */
+  /* ─── PAGE ───────────────────────────────────────────── */
   .page { display: none; }
   .page.active { display: block; }
 
@@ -515,7 +525,7 @@
     text-transform: uppercase;
     color: var(--gray-d);
   }
-  input, select {
+  input, select, textarea {
     font-family: var(--font-body);
     font-size: 0.82rem;
     border: 1px solid var(--gray-m);
@@ -526,8 +536,9 @@
     outline: none;
     transition: border-color 0.15s;
   }
-  input:focus, select:focus { border-color: var(--gold); }
+  input:focus, select:focus, textarea:focus { border-color: var(--gold); }
   select { cursor: pointer; }
+  textarea { resize: vertical; min-height: 64px; }
 
   /* ─── EMPTY STATE ────────────────────────────────────── */
   .empty-state {
@@ -580,6 +591,259 @@
 
   .chip-reimb  { background: var(--green-bg); color: var(--green); }
   .chip-nreimb { background: var(--red-bg); color: var(--red); }
+
+  /* ─── RESPONSIVIDADE MOBILE ──────────────────────────── */
+  @media (max-width: 768px) {
+
+    /* ── Layout: empilhar sidebar + main ── */
+    .layout {
+      grid-template-columns: 1fr;
+    }
+
+    /* ── Topbar ── */
+    .topbar {
+      padding: 0 1rem;
+      height: 52px;
+    }
+    .topbar-brand { font-size: 1rem; }
+    .topbar-brand span { display: none; }
+    /* Esconde botões de nav do topbar no mobile (estão na sidebar) */
+    .topbar-actions .btn-ghost { display: none; }
+
+    /* ── Sidebar: nav horizontal scrollável ── */
+    .sidebar {
+      position: static;
+      height: auto;
+      flex-direction: row;
+      overflow-x: auto;
+      overflow-y: hidden;
+      padding: 0.25rem 0;
+      border-right: none;
+      border-bottom: 1px solid rgba(201,168,76,0.2);
+      /* Esconder scrollbar mas manter scroll */
+      scrollbar-width: none;
+    }
+    .sidebar::-webkit-scrollbar { display: none; }
+    .sidebar-label { display: none; }
+    .sidebar-bottom {
+      /* Vira botão inline no final da nav */
+      margin-top: 0;
+      padding: 0.25rem 0.75rem 0.25rem 0.25rem;
+      border-top: none;
+      border-left: 1px solid rgba(201,168,76,0.15);
+      display: flex;
+      align-items: center;
+      flex-shrink: 0;
+    }
+    #add-month-btn {
+      width: auto;
+      white-space: nowrap;
+      padding: 0.45rem 0.85rem;
+      font-size: 0.65rem;
+      border-radius: 3px;
+    }
+    .month-tab {
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 0.5rem 0.85rem;
+      min-width: 72px;
+      border-left: none;
+      border-bottom: 3px solid transparent;
+      flex-shrink: 0;
+    }
+    .month-tab.active {
+      border-left: none;
+      border-bottom-color: var(--gold);
+      background: rgba(201,168,76,0.08);
+    }
+    .month-tab-name {
+      font-size: 0.72rem;
+      text-align: center;
+      line-height: 1.2;
+    }
+    .month-tab-total { font-size: 0.58rem; }
+
+    /* ── Headers de página ── */
+    .resumo-header,
+    .clientes-header,
+    .month-header {
+      padding: 1.1rem 1rem 0.9rem;
+    }
+    .resumo-title { font-size: 1.5rem; }
+    .resumo-sub   { font-size: 0.8rem; }
+    .month-title  { font-size: 1.3rem; }
+    .month-header {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 0.65rem;
+    }
+    .month-total-chip {
+      align-self: stretch;
+      text-align: left;
+      padding: 0.5rem 1rem;
+    }
+    .month-total-value { font-size: 1.25rem; }
+
+    /* ── Cards: 1 coluna ── */
+    .resumo-cards,
+    .clientes-cards {
+      grid-template-columns: 1fr;
+      padding: 0.85rem 1rem;
+      gap: 0.65rem;
+    }
+    .stat-value { font-size: 1.55rem; }
+
+    /* ── Tabelas: scroll horizontal ── */
+    .resumo-table-wrap,
+    .clientes-table-wrap,
+    .month-table-wrap {
+      padding: 0.75rem 1rem 1.5rem;
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+    }
+    /* Colunas menos importantes ficam ocultas na tabela do mês */
+    #month-tbody tr td:nth-child(6),  /* Processo */
+    #month-tbody tr td:nth-child(7),  /* Tipo de Custas */
+    #month-tbody tr td:nth-child(9),  /* Status */
+    #month-tbody tr td:nth-child(10), /* Obs */
+    #month-tbody tr td:nth-child(11), /* Delete */
+    #page-month thead th:nth-child(6),
+    #page-month thead th:nth-child(7),
+    #page-month thead th:nth-child(9),
+    #page-month thead th:nth-child(10),
+    #page-month thead th:nth-child(11) {
+      display: none;
+    }
+    /* Tornar o delete sempre visível e acessível */
+    #month-tbody tr td:nth-child(11) { display: table-cell; }
+    #page-month thead th:nth-child(11) { display: table-cell; }
+    .row-delete { opacity: 0.7; }
+
+    table { min-width: 0; width: 100%; }
+
+    /* ── Toolbar do mês ── */
+    .month-toolbar {
+      padding: 0.75rem 1rem;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+    }
+    .filter-input {
+      width: 100%;
+      order: -1;
+    }
+    .month-toolbar .btn-outline { margin-left: auto; }
+
+    /* ── Section title ── */
+    .section-title {
+      font-size: 1rem;
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 0.15rem;
+    }
+
+    /* ── Modal: sobe do fundo da tela (sheet) ── */
+    .modal-overlay { align-items: flex-end; }
+    .modal {
+      max-width: 100% !important;
+      border-radius: 14px 14px 0 0;
+      max-height: 92vh;
+      overflow-y: auto;
+    }
+    .modal-body { padding: 1.1rem 1.1rem 0.5rem; }
+    .modal-footer { padding: 0.75rem 1.1rem 1.1rem; }
+
+    /* ── Formulário: 1 coluna ── */
+    .form-grid { grid-template-columns: 1fr; }
+    .form-group.full { grid-column: 1; }
+
+    /* ── Tabela de clientes: esconder colunas menores ── */
+    #clientes-tbody tr td:nth-child(4),
+    #clientes-tbody tr td:nth-child(5),
+    .clientes-table-wrap table thead th:nth-child(4),
+    .clientes-table-wrap table thead th:nth-child(5) {
+      display: none;
+    }
+    /* Tabela de recibos: esconder data */
+    #recibos-tbody tr td:nth-child(4),
+    #recibos-tbody + thead th:nth-child(4) {
+      display: none;
+    }
+
+    /* ── Padding geral das páginas ── */
+    .resumo-header { padding-bottom: 1rem; }
+  }
+
+  /* ── Telas muito pequenas (< 380px) ── */
+  @media (max-width: 380px) {
+    .topbar-brand { font-size: 0.88rem; }
+    .btn { font-size: 0.68rem; padding: 0.4rem 0.75rem; }
+    .resumo-title { font-size: 1.25rem; }
+    .stat-value { font-size: 1.3rem; }
+  }
+
+  /* ─── OBS TOOLTIP ────────────────────────────────────── */
+  .obs-icon {
+    display: inline-block;
+    font-size: 0.75rem;
+    cursor: help;
+    color: var(--gold);
+    position: relative;
+  }
+  .obs-icon:hover::after {
+    content: attr(data-obs);
+    position: absolute;
+    left: 1.2rem;
+    top: -0.25rem;
+    background: var(--navy);
+    color: rgba(255,255,255,0.9);
+    font-family: var(--font-mono);
+    font-size: 0.68rem;
+    padding: 0.4rem 0.65rem;
+    border-radius: 3px;
+    white-space: pre-wrap;
+    max-width: 220px;
+    z-index: 50;
+    box-shadow: var(--shadow);
+    border: 1px solid rgba(201,168,76,0.25);
+  }
+
+  /* ─── PAGE: CLIENTES ────────────────────────────────── */
+  .clientes-header {
+    background: linear-gradient(135deg, var(--navy) 0%, var(--navy-light) 100%);
+    padding: 2.5rem 2.5rem 2rem;
+    border-bottom: 2px solid var(--gold);
+  }
+  .clientes-cards {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1.25rem;
+    padding: 1.75rem 2.5rem 0;
+    background: var(--cream);
+  }
+  .clientes-table-wrap {
+    padding: 1rem 2.5rem 2.5rem;
+  }
+  .rank-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.5rem;
+    height: 1.5rem;
+    border-radius: 50%;
+    font-family: var(--font-mono);
+    font-size: 0.65rem;
+    font-weight: 700;
+  }
+  .rank-1 { background: #FFD700; color: #7A5800; }
+  .rank-2 { background: #C0C0C0; color: #444; }
+  .rank-3 { background: #CD7F32; color: #5A2D00; }
+  .rank-other { background: var(--gray-l); color: var(--gray-d); }
+  .recibo-list {
+    font-family: var(--font-mono);
+    font-size: 0.68rem;
+    color: var(--gray-d);
+  }
 </style>
 </head>
 <body>
@@ -591,7 +855,8 @@
     <span>Escritório de Advocacia Zveiter</span>
   </div>
   <div class="topbar-actions">
-    <button class="btn btn-ghost btn-sm" onclick="showPage('resumo')">Resumo Geral</button>
+    <button class="btn btn-ghost btn-sm" onclick="showPage('resumo')">Resumo</button>
+    <button class="btn btn-ghost btn-sm" onclick="showPage('clientes')">Em Aberto</button>
     <button class="btn btn-gold btn-sm" onclick="openAddEntry()">+ Lançamento</button>
   </div>
 </div>
@@ -603,6 +868,10 @@
     <div class="sidebar-label">Visão Geral</div>
     <div id="sidebar-resumo" class="month-tab active" onclick="showPage('resumo')">
       <span class="month-tab-name">Resumo</span>
+    </div>
+    <div id="sidebar-clientes" class="month-tab" onclick="showPage('clientes')">
+      <span class="month-tab-name">Em Aberto</span>
+      <span class="month-tab-total" style="color:rgba(155,44,44,0.7)">R$ 72.396</span>
     </div>
 
     <div class="sidebar-label" style="margin-top:1rem">Meses</div>
@@ -674,6 +943,78 @@
       </div>
     </div><!-- /resumo -->
 
+    <!-- PAGE: CLIENTES EM ABERTO -->
+    <div id="page-clientes" class="page">
+      <div class="clientes-header">
+        <div>
+          <div class="resumo-title">Clientes em Aberto</div>
+          <div class="resumo-sub">Reembolsos pendentes · Atualização manual</div>
+        </div>
+      </div>
+
+      <div class="clientes-cards">
+        <div class="stat-card">
+          <div class="stat-label">Total em Aberto</div>
+          <div class="stat-value gold">R$ 72.396,39</div>
+          <div class="stat-sub">19 clientes</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Maior Devedor</div>
+          <div class="stat-value" style="font-size:1.3rem">BOUERI</div>
+          <div class="stat-sub">R$ 16.120,72</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Recibos em Aberto</div>
+          <div class="stat-value">43</div>
+          <div class="stat-sub">desde nov/2020</div>
+        </div>
+      </div>
+
+      <div class="clientes-table-wrap" style="margin-top:1.5rem">
+        <div class="section-title">
+          Total por Cliente
+          <span class="section-title-sub">ordenado por valor em aberto</span>
+        </div>
+        <table>
+          <thead>
+            <tr>
+              <th class="center">#</th>
+              <th>Cliente</th>
+              <th class="right">Total em Aberto</th>
+              <th>Recibos</th>
+              <th>Período</th>
+            </tr>
+          </thead>
+          <tbody id="clientes-tbody"></tbody>
+          <tfoot>
+            <tr>
+              <td colspan="2"><strong>TOTAL GERAL</strong></td>
+              <td class="right"><strong>R$ 72.396,39</strong></td>
+              <td colspan="2"></td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+
+      <div class="clientes-table-wrap">
+        <div class="section-title">
+          Planilha Geral por Recibo
+          <span class="section-title-sub">todos os lançamentos em aberto</span>
+        </div>
+        <table>
+          <thead>
+            <tr>
+              <th>Recibo</th>
+              <th>Cliente</th>
+              <th class="right">Valor (R$)</th>
+              <th>Data</th>
+            </tr>
+          </thead>
+          <tbody id="recibos-tbody"></tbody>
+        </table>
+      </div>
+    </div><!-- /clientes -->
+
     <!-- PAGE: MONTH (dynamic) -->
     <div id="page-month" class="page">
       <div class="month-header">
@@ -690,6 +1031,7 @@
       <div class="month-toolbar">
         <input type="text" class="filter-input" id="month-filter" placeholder="Filtrar por cliente, processo…" oninput="filterTable()">
         <button class="btn btn-gold btn-sm" onclick="openAddEntry()">+ Lançamento</button>
+        <button class="btn btn-pdf btn-sm" onclick="exportMonthPDF()">⬇ PDF do Mês</button>
         <button class="btn btn-outline btn-sm" onclick="openDeleteMonth()">Excluir Mês</button>
       </div>
 
@@ -706,6 +1048,7 @@
               <th>Tipo de Custas</th>
               <th class="center">Reimb.</th>
               <th class="center">Status</th>
+              <th class="center">Obs.</th>
               <th></th>
             </tr>
           </thead>
@@ -748,7 +1091,7 @@
       </div>
     </div>
     <div class="modal-footer">
-      <button class="btn btn-ghost" onclick="closeModal('modal-addmonth')" style="color:var(--navy); background:transparent; border:1px solid var(--gray-m)">Cancelar</button>
+      <button class="btn" onclick="closeModal('modal-addmonth')" style="color:var(--navy); background:transparent; border:1px solid var(--gray-m)">Cancelar</button>
       <button class="btn btn-gold" onclick="confirmAddMonth()">Criar Mês</button>
     </div>
   </div>
@@ -821,6 +1164,10 @@
             <option>CANCELADO</option>
           </select>
         </div>
+        <div class="form-group full">
+          <label>Observações</label>
+          <textarea id="entry-obs" placeholder="Observações sobre este lançamento…"></textarea>
+        </div>
       </div>
     </div>
     <div class="modal-footer">
@@ -832,7 +1179,7 @@
 
 <script>
 // ─────────────────────────────────────────────────────────
-// STATE E CONFIGURAÇÃO DA NUVEM (API STRICT MODE)
+// CONFIG
 // ─────────────────────────────────────────────────────────
 const API_URL = 'https://sheetdb.io/api/v1/2udn9s4iopfks';
 
@@ -842,27 +1189,53 @@ let state = {
 };
 
 // ─────────────────────────────────────────────────────────
+// DADOS PRÉ-CARREGADOS DA PLANILHA (fallback + enriquecimento)
+// ─────────────────────────────────────────────────────────
+const PLANILHA_ENTRIES = []; // dados vêm 100% do SheetDB
+
+// ─────────────────────────────────────────────────────────
+// DADOS CLIENTES EM ABERTO
+// ─────────────────────────────────────────────────────────
+const CLIENTES_ABERTO = [
+  { cliente: 'BOUERI', total: 16120.72, recibos: [{n:'7690',data:'23/07/2021',valor:3806.17},{n:'7817',data:'16/08/2022',valor:1546.03},{n:'7879',data:'19/04/2023',valor:384.62},{n:'8886',data:'01/06/2023',valor:630.39},{n:'7894',data:'03/07/2023',valor:1004.91},{n:'8013',data:'27/11/2024',valor:1399.19},{n:'8017',data:'13/12/2024',valor:3337.20},{n:'8031',data:'28/04/2025',valor:2683.86},{n:'8047',data:'15/08/2025',valor:5134.52}] },
+  { cliente: 'FIDIC / FIDC POLO', total: 10221.13, recibos: [{n:'7824',data:'14/09/2022',valor:944.56},{n:'7865',data:'27/02/2023',valor:2672.57},{n:'7891',data:'03/07/2023',valor:2356.20},{n:'7950',data:'11/12/2023',valor:1082.41},{n:'7972',data:'17/04/2024',valor:3165.39}] },
+  { cliente: 'GLOBO', total: 9779.70, recibos: [{n:'8061',data:'28/01/2026',valor:3170.47},{n:'8065',data:'04/03/2026',valor:6609.23}] },
+  { cliente: 'TGB CIANO / CIANO', total: 5621.29, recibos: [{n:'7877',data:'06/04/2023',valor:2328.40},{n:'7952',data:'12/12/2023',valor:1019.83},{n:'7967',data:'01/03/2024',valor:971.75},{n:'8011',data:'25/11/2024',valor:1301.31}] },
+  { cliente: 'ROBERTO MARRA', total: 4990.01, recibos: [{n:'7729',data:'24/06/2021',valor:2413.79},{n:'7896',data:'04/07/2023',valor:1342.65},{n:'7977',data:'02/05/2024',valor:1234.57}] },
+  { cliente: 'HERMOGÊNIO', total: 4197.84, recibos: [{n:'7992',data:'06/08/2024',valor:3112.69},{n:'8000',data:'16/09/2024',valor:1085.15}] },
+  { cliente: 'MANOEL CARLOS / FLORIDO', total: 3537.06, recibos: [{n:'7966',data:'29/02/2024',valor:1067.92},{n:'8003',data:'25/09/2024',valor:2469.14}] },
+  { cliente: 'MULTIPLAN', total: 2590.57, recibos: [{n:'7669',data:'03/11/2020',valor:2590.57}] },
+  { cliente: 'MARCELA AMODIO', total: 2346.08, recibos: [{n:'7750',data:'17/09/2021',valor:1307.12},{n:'7803',data:'24/06/2022',valor:661.63},{n:'7858',data:'10/01/2023',valor:377.33}] },
+  { cliente: 'J VEIGA / JERÔNIMO', total: 1969.73, recibos: [{n:'7859',data:'10/01/2023',valor:931.98},{n:'7931',data:'16/10/2023',valor:1037.75}] },
+  { cliente: 'CANABRAVA', total: 1963.65, recibos: [{n:'7807',data:'29/06/2022',valor:1963.65}] },
+  { cliente: 'ONCOCLÍNICA', total: 1861.01, recibos: [{n:'8056',data:'09/01/2025',valor:1861.01}] },
+  { cliente: 'ARCHIMINO', total: 1443.37, recibos: [{n:'7691',data:'29/07/2021',valor:1443.37}] },
+  { cliente: 'WALTER CÉSAR', total: 1234.57, recibos: [{n:'7994',data:'19/08/2024',valor:1234.57}] },
+  { cliente: 'JOÃO MEDEIROS', total: 1202.56, recibos: [{n:'8044',data:'15/07/2025',valor:1202.56}] },
+  { cliente: 'GAFISA', total: 1164.20, recibos: [{n:'7900',data:'12/12/2023',valor:1164.20}] },
+  { cliente: 'FAF', total: 1085.15, recibos: [{n:'7973',data:'17/04/2024',valor:1085.15}] },
+  { cliente: 'CARVALHO HOSKEN', total: 651.50, recibos: [{n:'7801',data:'23/06/2022',valor:651.50}] },
+  { cliente: 'PARAPUÃ', total: 416.25, recibos: [{n:'7693',data:'05/08/2022',valor:416.25}] },
+];
+
+// ─────────────────────────────────────────────────────────
 // COMUNICAÇÃO COM A NUVEM
 // ─────────────────────────────────────────────────────────
 async function loadState() {
-  document.getElementById('stat-total').textContent = "Carregando a nuvem...";
-
+  document.getElementById('stat-total').textContent = "Carregando…";
   try {
     const response = await fetch(API_URL);
     if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
     const data = await response.json();
 
     const monthsMap = {};
-    
     data.forEach(row => {
-      if (!row.mes_id) return; // Ignora linhas em branco
-      
+      if (!row.mes_id) return;
       if (!monthsMap[row.mes_id]) {
         const parts = row.mes_id.split('-');
         const label = parts.length === 2 ? `${parts[0]} / 20${parts[1]}` : row.mes_id;
         monthsMap[row.mes_id] = { id: row.mes_id, label: label, entries: [] };
       }
-      
       if (row.grerj || row.cliente || row.valor) {
         monthsMap[row.mes_id].entries.push({
           id: parseInt(row.id),
@@ -875,19 +1248,24 @@ async function loadState() {
           classe: row.classe || '',
           parte: row.parte || '',
           reimb: row.reembolsavel || '',
-          status: row.status || ''
+          status: row.status || '',
+          obs: row.obs || '',
         });
       }
     });
 
+    // Dados vêm 100% do SheetDB
+
     state.months = Object.values(monthsMap);
     renderSidebar();
     renderResumo();
+    renderClientes();
     if (state.currentMonth) showMonth(state.currentMonth);
 
   } catch (error) {
-    console.error("Falha ao puxar dados da API:", error);
-    alert('Erro de conexão. O painel não conseguiu ler a planilha do Google.');
+    console.error("Falha ao conectar com o SheetDB:", error);
+    document.getElementById('stat-total').textContent = "Erro de conexão";
+    alert('Erro de conexão. Abra o dashboard via Live Server (VS Code) ou servidor HTTP — não pelo explorador de arquivos.');
   }
 }
 
@@ -906,7 +1284,8 @@ function formatDate(d) {
 }
 function tipoBadge(tipo) {
   if (!tipo) return '<span class="badge badge-gray">—</span>';
-  const cls = tipo.toUpperCase()==='GRERJ'?'tipo-grerj':tipo.toUpperCase()==='GRU'?'tipo-gru':tipo.toUpperCase()==='DEPÓSITO'?'tipo-dep':tipo.toUpperCase().includes('CERTID')?'tipo-cert':'tipo-other';
+  const t = tipo.toUpperCase().trim();
+  const cls = t==='GRERJ'?'tipo-grerj':t==='GRU'?'tipo-gru':t==='DEPÓSITO'?'tipo-dep':t.includes('CERTID')?'tipo-cert':'tipo-other';
   return `<span class="badge ${cls}">${tipo}</span>`;
 }
 function reimbBadge(r) {
@@ -925,33 +1304,32 @@ function renderSidebar() {
   el.innerHTML = state.months.map(m => {
     const total = m.entries.reduce((s,e) => s + (parseFloat(e.valor)||0), 0);
     const active = state.currentMonth === m.id ? 'active' : '';
+    const name = m.label.split('/')[0].trim().split(' ')[0];
+    const yr = m.label.split('/')[1]?.trim() || '';
     return `<div class="month-tab ${active}" onclick="showMonth('${m.id}')">
-      <span class="month-tab-name">${m.label.replace(' / ','\n').split('\n')[0].split(' ')[0]}<br><small style="font-size:0.7rem;opacity:0.6">${m.label.split('/')[1]?.trim()||''}</small></span>
+      <span class="month-tab-name">${name}<br><small style="font-size:0.7rem;opacity:0.6">${yr}</small></span>
       <span class="month-tab-total">${formatBRL(total)}</span>
     </div>`;
   }).join('');
 }
 
 function renderResumo() {
-  let grandTotal = 0, grandCount = 0;
-  let grandReimb = 0, grandNReimb = 0;
-  let maxMonth = null, maxVal = 0;
-  let prevTotal = null;
+  let grandTotal=0, grandCount=0, grandReimb=0, grandNReimb=0;
+  let maxMonth=null, maxVal=0, prevTotal=null;
 
   const rows = state.months.map(m => {
-    const total = m.entries.reduce((s,e) => s+(parseFloat(e.valor)||0),0);
-    const reimb = m.entries.filter(e=>e.reimb.toUpperCase()==='SIM').reduce((s,e)=>s+(parseFloat(e.valor)||0),0);
-    const nreimb = m.entries.filter(e=>e.reimb.toUpperCase()==='NÃO' || e.reimb.toUpperCase()==='NAO').reduce((s,e)=>s+(parseFloat(e.valor)||0),0);
-    grandTotal += total; grandCount += m.entries.length;
-    grandReimb += reimb; grandNReimb += nreimb;
-    if (total > maxVal) { maxVal = total; maxMonth = m.label; }
+    const total = m.entries.reduce((s,e)=>s+(parseFloat(e.valor)||0),0);
+    const reimb = m.entries.filter(e=>(e.reimb||'').toUpperCase()==='SIM').reduce((s,e)=>s+(parseFloat(e.valor)||0),0);
+    const nreimb = m.entries.filter(e=>{const r=(e.reimb||'').toUpperCase();return r==='NÃO'||r==='NAO';}).reduce((s,e)=>s+(parseFloat(e.valor)||0),0);
+    grandTotal+=total; grandCount+=m.entries.length; grandReimb+=reimb; grandNReimb+=nreimb;
+    if(total>maxVal){maxVal=total;maxMonth=m.label;}
 
-    let varHtml = '<span style="color:var(--gray-d)">—</span>';
-    if (prevTotal !== null && prevTotal > 0 && total > 0) {
-      const pct = ((total-prevTotal)/prevTotal*100);
-      varHtml = pct >= 0 ? `<span class="var-up">▲ ${pct.toFixed(1)}%</span>` : `<span class="var-down">▼ ${Math.abs(pct).toFixed(1)}%</span>`;
+    let varHtml='<span style="color:var(--gray-d)">—</span>';
+    if(prevTotal!==null&&prevTotal>0&&total>0){
+      const pct=((total-prevTotal)/prevTotal*100);
+      varHtml=pct>=0?`<span class="var-up">▲ ${pct.toFixed(1)}%</span>`:`<span class="var-down">▼ ${Math.abs(pct).toFixed(1)}%</span>`;
     }
-    if (total > 0) prevTotal = total;
+    if(total>0) prevTotal=total;
 
     return `<tr onclick="showMonth('${m.id}')" style="cursor:pointer">
       <td><strong>${m.label}</strong></td>
@@ -976,6 +1354,45 @@ function renderResumo() {
   document.getElementById('tfoot-nreimb').textContent = formatBRL(grandNReimb);
 }
 
+function renderClientes() {
+  // Tabela por cliente
+  const tbody = document.getElementById('clientes-tbody');
+  tbody.innerHTML = CLIENTES_ABERTO.map((c, i) => {
+    const rank = i===0?'rank-1':i===1?'rank-2':i===2?'rank-3':'rank-other';
+    const periodo = c.recibos.length > 0
+      ? `${c.recibos[0].data.split('/').slice(1).join('/')} – ${c.recibos[c.recibos.length-1].data.split('/').slice(1).join('/')}`
+      : '—';
+    const recList = c.recibos.map(r=>r.n).join(', ');
+    return `<tr>
+      <td class="center"><span class="rank-badge ${rank}">${i+1}</span></td>
+      <td><strong>${c.cliente}</strong></td>
+      <td class="right"><strong style="color:var(--red)">${formatBRL(c.total)}</strong></td>
+      <td><span class="recibo-list">${recList}</span></td>
+      <td class="mono" style="font-size:0.72rem;color:var(--gray-d)">${periodo}</td>
+    </tr>`;
+  }).join('');
+
+  // Tabela geral de recibos
+  const allRecibos = [];
+  CLIENTES_ABERTO.forEach(c => {
+    c.recibos.forEach(r => allRecibos.push({...r, cliente: c.cliente}));
+  });
+  allRecibos.sort((a,b) => {
+    const da = a.data.split('/').reverse().join('');
+    const db = b.data.split('/').reverse().join('');
+    return da.localeCompare(db);
+  });
+
+  document.getElementById('recibos-tbody').innerHTML = allRecibos.map(r => `
+    <tr>
+      <td class="mono"><strong>${r.n}</strong></td>
+      <td>${r.cliente}</td>
+      <td class="right"><strong>${formatBRL(r.valor)}</strong></td>
+      <td class="mono" style="font-size:0.75rem">${r.data}</td>
+    </tr>
+  `).join('');
+}
+
 function renderMonthTable(filter='') {
   const m = state.months.find(m=>m.id===state.currentMonth);
   if (!m) return;
@@ -992,11 +1409,14 @@ function renderMonthTable(filter='') {
 
   const tbody = document.getElementById('month-tbody');
   const empty = document.getElementById('month-empty');
-  if (m.entries.length === 0) { tbody.innerHTML=''; empty.style.display=''; return; }
-  empty.style.display = 'none';
+  if (m.entries.length===0) { tbody.innerHTML=''; empty.style.display=''; return; }
+  empty.style.display='none';
 
-  tbody.innerHTML = filtered.map((e,i) => `
-    <tr data-id="${e.id}">
+  tbody.innerHTML = filtered.map(e => {
+    const obsHtml = e.obs
+      ? `<span class="obs-icon" data-obs="${e.obs.replace(/"/g,'&quot;')}">💬</span>`
+      : '<span style="color:var(--gray-m);font-size:0.75rem">—</span>';
+    return `<tr data-id="${e.id}">
       <td class="mono" style="font-size:0.72rem">${e.grerj||'—'}</td>
       <td class="mono" style="font-size:0.78rem">${formatDate(e.date)}</td>
       <td class="center">${tipoBadge(e.tipo)}</td>
@@ -1006,9 +1426,115 @@ function renderMonthTable(filter='') {
       <td style="font-size:0.8rem">${e.classe||'—'}</td>
       <td class="center">${reimbBadge(e.reimb)}</td>
       <td class="center">${statusBadge(e.status)}</td>
+      <td class="center">${obsHtml}</td>
       <td><button class="row-delete" onclick="deleteEntry('${m.id}',${e.id},event)" title="Excluir">✕</button></td>
-    </tr>
-  `).join('');
+    </tr>`;
+  }).join('');
+}
+
+// ─────────────────────────────────────────────────────────
+// EXPORT PDF
+// ─────────────────────────────────────────────────────────
+function exportMonthPDF() {
+  const m = state.months.find(x=>x.id===state.currentMonth);
+  if (!m) return;
+
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+
+  const total = m.entries.reduce((s,e)=>s+(parseFloat(e.valor)||0),0);
+
+  // Header
+  doc.setFillColor(13, 27, 42);
+  doc.rect(0, 0, 297, 28, 'F');
+  doc.setDrawColor(201, 168, 76);
+  doc.setLineWidth(0.8);
+  doc.line(0, 28, 297, 28);
+
+  doc.setTextColor(201, 168, 76);
+  doc.setFontSize(18);
+  doc.setFont('helvetica', 'bold');
+  doc.text('EAZ — Custas Processuais', 14, 12);
+
+  doc.setFontSize(9);
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(180, 150, 80);
+  doc.text('Escritório de Advocacia Zveiter', 14, 19);
+  doc.text(`Mês: ${m.label}`, 14, 25);
+
+  doc.setTextColor(255, 255, 255);
+  doc.setFontSize(10);
+  doc.setFont('helvetica', 'bold');
+  doc.text(`Total: ${formatBRL(total)}`, 230, 17, {align:'right'});
+  doc.setFontSize(8);
+  doc.setFont('helvetica', 'normal');
+  doc.text(`${m.entries.length} lançamentos`, 230, 23, {align:'right'});
+
+  // Tabela
+  const rows = m.entries.map(e => [
+    e.grerj || '—',
+    formatDate(e.date),
+    e.tipo || '—',
+    e.cliente || '—',
+    formatBRL(parseFloat(e.valor)||0),
+    e.processo || '—',
+    e.classe || '—',
+    e.reimb || '—',
+    e.status || '—',
+    e.obs ? e.obs.substring(0,40) : '—',
+  ]);
+
+  doc.autoTable({
+    startY: 33,
+    head: [['GRERJ / Doc.', 'Data', 'Tipo', 'Cliente', 'Valor', 'Processo', 'Classe', 'Reimb.', 'Status', 'Obs.']],
+    body: rows,
+    styles: {
+      font: 'helvetica',
+      fontSize: 7,
+      cellPadding: 2,
+      textColor: [13, 27, 42],
+    },
+    headStyles: {
+      fillColor: [13, 27, 42],
+      textColor: [201, 168, 76],
+      fontStyle: 'bold',
+      fontSize: 7.5,
+      lineColor: [201, 168, 76],
+      lineWidth: { bottom: 0.5 },
+    },
+    alternateRowStyles: { fillColor: [244, 243, 239] },
+    columnStyles: {
+      0: { cellWidth: 32 },
+      1: { cellWidth: 18 },
+      2: { cellWidth: 18 },
+      3: { cellWidth: 32 },
+      4: { cellWidth: 22, halign: 'right' },
+      5: { cellWidth: 48 },
+      6: { cellWidth: 30 },
+      7: { cellWidth: 15, halign: 'center' },
+      8: { cellWidth: 18, halign: 'center' },
+      9: { cellWidth: 40 },
+    },
+    foot: [[
+      { content: 'TOTAL GERAL', colSpan: 4, styles: { fillColor:[13,27,42], textColor:[201,168,76], fontStyle:'bold' } },
+      { content: formatBRL(total), styles: { fillColor:[13,27,42], textColor:[201,168,76], fontStyle:'bold', halign:'right' } },
+      { content: '', colSpan: 5, styles: { fillColor:[13,27,42] } },
+    ]],
+    footStyles: { fillColor:[13,27,42], textColor:[201,168,76] },
+    margin: { left: 14, right: 14 },
+    didDrawPage: (data) => {
+      // Footer
+      const pageCount = doc.internal.getNumberOfPages();
+      doc.setFontSize(7);
+      doc.setTextColor(120, 120, 110);
+      doc.text(
+        `Gerado em ${new Date().toLocaleDateString('pt-BR')} · Página ${data.pageNumber}/${pageCount}`,
+        148, doc.internal.pageSize.height - 8, { align:'center' }
+      );
+    }
+  });
+
+  doc.save(`EAZ_Custas_${m.id}.pdf`);
 }
 
 // ─────────────────────────────────────────────────────────
@@ -1018,11 +1544,16 @@ function showPage(page) {
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
   document.querySelectorAll('.month-tab').forEach(t=>t.classList.remove('active'));
 
-  if (page === 'resumo') {
+  if (page==='resumo') {
     document.getElementById('page-resumo').classList.add('active');
     document.getElementById('sidebar-resumo').classList.add('active');
-    state.currentMonth = null;
+    state.currentMonth=null;
     renderResumo();
+  } else if (page==='clientes') {
+    document.getElementById('page-clientes').classList.add('active');
+    document.getElementById('sidebar-clientes').classList.add('active');
+    state.currentMonth=null;
+    renderClientes();
   }
   renderSidebar();
 }
@@ -1047,7 +1578,7 @@ function openModal(id) { document.getElementById(id).classList.add('open'); }
 function closeModal(id) { document.getElementById(id).classList.remove('open'); }
 
 document.querySelectorAll('.modal-overlay').forEach(m => {
-  m.addEventListener('click', e => { if (e.target === m) m.classList.remove('open'); });
+  m.addEventListener('click', e => { if(e.target===m) m.classList.remove('open'); });
 });
 
 function openAddMonth() { openModal('modal-addmonth'); }
@@ -1073,13 +1604,12 @@ async function confirmAddMonth() {
       body: JSON.stringify({ data: [{ id: Date.now(), mes_id: id }] })
     });
     if (!response.ok) throw new Error("Erro no POST");
-    
     state.months.push({ id, label: `${name} / ${year}`, entries: [] });
     closeModal('modal-addmonth');
     renderSidebar();
     renderResumo();
     showMonth(id);
-  } catch (e) {
+  } catch(e) {
     console.error(e);
     alert('A API rejeitou a criação. Verifique os cabeçalhos da planilha.');
   } finally {
@@ -1091,10 +1621,8 @@ async function confirmAddMonth() {
 function openAddEntry() {
   const sel = document.getElementById('entry-month');
   sel.innerHTML = state.months.map(m=>`<option value="${m.id}" ${m.id===state.currentMonth?'selected':''}>${m.label}</option>`).join('');
-
-  ['entry-grerj','entry-date','entry-cliente','entry-valor','entry-processo','entry-classe','entry-parte'].forEach(id=>{ document.getElementById(id).value=''; });
+  ['entry-grerj','entry-date','entry-cliente','entry-valor','entry-processo','entry-classe','entry-parte','entry-obs'].forEach(id=>{ document.getElementById(id).value=''; });
   ['entry-tipo','entry-reimb','entry-status'].forEach(id=>{ document.getElementById(id).value=''; });
-
   document.getElementById('entry-date').value = new Date().toISOString().slice(0,10);
   openModal('modal-addentry');
 }
@@ -1113,7 +1641,7 @@ async function confirmAddEntry() {
   btn.textContent = 'Enviando para o Google Sheets...';
   btn.disabled = true;
 
-  const newId = Date.now(); // Usando timestamp como ID único seguro
+  const newId = Date.now();
   const newEntry = {
     id: newId,
     grerj: document.getElementById('entry-grerj').value.trim(),
@@ -1126,6 +1654,7 @@ async function confirmAddEntry() {
     parte: document.getElementById('entry-parte').value.trim(),
     reimb: document.getElementById('entry-reimb').value,
     status: document.getElementById('entry-status').value,
+    obs: document.getElementById('entry-obs').value.trim(),
   };
 
   try {
@@ -1136,19 +1665,15 @@ async function confirmAddEntry() {
         id: newEntry.id, mes_id: monthId, grerj: newEntry.grerj, data: newEntry.date,
         tipo: newEntry.tipo, cliente: newEntry.cliente, valor: newEntry.valor,
         processo: newEntry.processo, classe: newEntry.classe, parte: newEntry.parte,
-        reembolsavel: newEntry.reimb, status: newEntry.status
+        reembolsavel: newEntry.reimb, status: newEntry.status, obs: newEntry.obs
       }]})
     });
-
     if (!response.ok) throw new Error("A nuvem negou a gravação.");
-
-    // Atualiza a tela APENAS se tiver ido pra nuvem com sucesso
     m.entries.push(newEntry);
     closeModal('modal-addentry');
     renderSidebar();
-    if (state.currentMonth === monthId) { renderMonthTable(); } else { showMonth(monthId); }
+    if (state.currentMonth===monthId) { renderMonthTable(); } else { showMonth(monthId); }
     renderResumo();
-
   } catch(e) {
     console.error(e);
     alert("Erro crítico: Os dados não foram salvos na planilha. Inspecione o erro no console (F12).");
@@ -1163,17 +1688,14 @@ async function deleteEntry(monthId, entryId, evt) {
   if (!confirm('Isso vai apagar da planilha do Google. Confirmar?')) return;
   const m = state.months.find(m=>m.id===monthId);
   if (!m) return;
-
   const rowBtn = evt.target;
   rowBtn.textContent = '⏳';
-
   try {
     const response = await fetch(`${API_URL}/id/${entryId}`, {
       method: 'DELETE',
       headers: { 'Accept': 'application/json', 'Content-Type': 'application/json' }
     });
     if (!response.ok) throw new Error("Falha no DELETE");
-
     m.entries = m.entries.filter(e=>e.id!==entryId);
     renderMonthTable();
     renderSidebar();
@@ -1189,19 +1711,16 @@ async function openDeleteMonth() {
   if (!state.currentMonth) return;
   const m = state.months.find(m=>m.id===state.currentMonth);
   if (!confirm(`Excluir o mês "${m.label}" e todos os seus ${m.entries.length} lançamentos do Banco de Dados?`)) return;
-  
   const monthId = state.currentMonth;
   const btn = document.querySelector('.month-toolbar .btn-outline');
   const txtOriginal = btn.textContent;
   btn.textContent = 'Deletando na nuvem...';
-
   try {
     const response = await fetch(`${API_URL}/mes_id/${monthId}`, {
       method: 'DELETE',
       headers: { 'Accept': 'application/json', 'Content-Type': 'application/json' }
     });
     if (!response.ok) throw new Error("Falha no DELETE do mês");
-
     state.months = state.months.filter(month=>month.id!==monthId);
     state.currentMonth = null;
     renderSidebar();
