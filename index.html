@@ -5,6 +5,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Custas Diárias — EAZ</title>
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;0,700;1,400;1,600&family=DM+Mono:wght@300;400;500&family=Libre+Baskerville:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <style>
   :root {
     --navy: #0D1B2A;
@@ -115,6 +118,30 @@
     font-size: 0.7rem;
     padding: 0.3rem 0.7rem;
   }
+  .btn-pdf {
+    background: transparent;
+    color: rgba(201,168,76,0.85);
+    border: 1px solid rgba(201,168,76,0.4);
+    font-size: 0.7rem;
+    padding: 0.3rem 0.7rem;
+  }
+  .btn-pdf:hover { background: rgba(201,168,76,0.1); color: var(--gold); }
+  .btn-excel {
+    background: transparent;
+    color: rgba(46,125,82,0.85);
+    border: 1px solid rgba(46,125,82,0.4);
+    font-size: 0.7rem;
+    padding: 0.3rem 0.7rem;
+  }
+  .btn-excel:hover { background: var(--green-bg); color: var(--green); }
+  .btn-delete-paid {
+    background: transparent;
+    color: rgba(155,44,44,0.75);
+    border: 1px solid rgba(155,44,44,0.3);
+    font-size: 0.7rem;
+    padding: 0.3rem 0.7rem;
+  }
+  .btn-delete-paid:hover { background: var(--red-bg); color: var(--red); }
 
   /* ─── LAYOUT ─────────────────────────────────────────── */
   .layout {
@@ -214,7 +241,7 @@
     overflow: hidden;
   }
 
-  /* ─── PAGE: RESUMO ───────────────────────────────────── */
+  /* ─── PAGE ───────────────────────────────────────────── */
   .page { display: none; }
   .page.active { display: block; }
 
@@ -283,6 +310,28 @@
     margin-top: 0.35rem;
     font-family: var(--font-mono);
   }
+
+  /* ─── CHART ──────────────────────────────────────────── */
+  .chart-wrap {
+    padding: 0 2.5rem 1.5rem;
+    background: var(--cream);
+  }
+  .chart-inner {
+    background: var(--white);
+    border: 1px solid var(--gray-m);
+    border-radius: var(--radius);
+    padding: 1.25rem 1.5rem;
+    box-shadow: var(--shadow-sm);
+  }
+  .chart-title {
+    font-family: var(--font-mono);
+    font-size: 0.62rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--gray-d);
+    margin-bottom: 1rem;
+  }
+  #chart-monthly { max-height: 180px; }
 
   /* ─── RESUMO TABLE ───────────────────────────────────── */
   .resumo-table-wrap {
@@ -420,6 +469,7 @@
     display: flex;
     gap: 0.75rem;
     align-items: center;
+    flex-wrap: wrap;
   }
   .filter-input {
     font-family: var(--font-mono);
@@ -515,7 +565,7 @@
     text-transform: uppercase;
     color: var(--gray-d);
   }
-  input, select {
+  input, select, textarea {
     font-family: var(--font-body);
     font-size: 0.82rem;
     border: 1px solid var(--gray-m);
@@ -526,8 +576,24 @@
     outline: none;
     transition: border-color 0.15s;
   }
-  input:focus, select:focus { border-color: var(--gold); }
+  input:focus, select:focus, textarea:focus { border-color: var(--gold); }
   select { cursor: pointer; }
+  select:disabled { opacity: 0.6; cursor: not-allowed; background: var(--gray-l); }
+  textarea { resize: vertical; min-height: 64px; }
+
+  /* ─── EDIT MODE INDICATOR ────────────────────────────── */
+  .edit-mode-bar {
+    background: rgba(201,168,76,0.08);
+    border-bottom: 1px solid rgba(201,168,76,0.2);
+    padding: 0.5rem 1.5rem;
+    font-family: var(--font-mono);
+    font-size: 0.68rem;
+    color: var(--gold);
+    letter-spacing: 0.06em;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
 
   /* ─── EMPTY STATE ────────────────────────────────────── */
   .empty-state {
@@ -554,19 +620,42 @@
   ::-webkit-scrollbar-thumb { background: var(--gray-m); border-radius: 3px; }
   ::-webkit-scrollbar-thumb:hover { background: var(--gold); }
 
-  /* ─── DELETE ROW BTN ─────────────────────────────────── */
-  .row-delete {
+  /* ─── ROW ACTION BUTTONS ─────────────────────────────── */
+  .row-actions {
+    display: flex;
+    gap: 0.2rem;
+    align-items: center;
+    justify-content: flex-end;
     opacity: 0;
     transition: opacity 0.15s;
+  }
+  tbody tr:hover .row-actions { opacity: 1; }
+  .row-action-btn {
     background: none;
     border: none;
-    color: var(--red);
     cursor: pointer;
-    font-size: 0.85rem;
+    font-size: 0.8rem;
     padding: 0.2rem 0.4rem;
     border-radius: 2px;
+    line-height: 1;
+    transition: background 0.12s;
   }
-  tbody tr:hover .row-delete { opacity: 1; }
+  .row-edit {
+    color: var(--gold);
+  }
+  .row-edit:hover { background: rgba(201,168,76,0.15); }
+  .row-paid-btn {
+    color: var(--green);
+  }
+  .row-paid-btn:hover { background: var(--green-bg); }
+  .row-delete-btn {
+    color: var(--red);
+  }
+  .row-delete-btn:hover { background: var(--red-bg); }
+
+  /* Linha PAGO: leve opacidade para diferenciar */
+  tbody tr.row-pago { opacity: 0.65; }
+  tbody tr.row-pago:hover { opacity: 1; }
 
   .tipo-grerj  { background: #EBF0F8; color: #2B4C80; }
   .tipo-gru    { background: #F0F8EB; color: #2B6B2B; }
@@ -580,6 +669,311 @@
 
   .chip-reimb  { background: var(--green-bg); color: var(--green); }
   .chip-nreimb { background: var(--red-bg); color: var(--red); }
+
+  /* ─── OBS TOOLTIP ────────────────────────────────────── */
+  .obs-icon {
+    display: inline-block;
+    font-size: 0.75rem;
+    cursor: help;
+    color: var(--gold);
+    position: relative;
+  }
+  .obs-icon:hover::after {
+    content: attr(data-obs);
+    position: absolute;
+    left: 1.2rem;
+    top: -0.25rem;
+    background: var(--navy);
+    color: rgba(255,255,255,0.9);
+    font-family: var(--font-mono);
+    font-size: 0.68rem;
+    padding: 0.4rem 0.65rem;
+    border-radius: 3px;
+    white-space: pre-wrap;
+    max-width: 220px;
+    z-index: 50;
+    box-shadow: var(--shadow);
+    border: 1px solid rgba(201,168,76,0.25);
+  }
+
+  /* ─── ABERTO: ROW ACTIONS ───────────────────────────── */
+  .aberto-actions {
+    display: flex;
+    gap: 0.2rem;
+    align-items: center;
+    justify-content: flex-end;
+    opacity: 0;
+    transition: opacity 0.15s;
+  }
+  tbody tr:hover .aberto-actions { opacity: 1; }
+
+  /* ─── ABERTO: STATUS BADGE ───────────────────────────── */
+  .badge-aberto {
+    display: inline-block;
+    padding: 0.18rem 0.55rem;
+    border-radius: 20px;
+    font-size: 0.65rem;
+    font-family: var(--font-mono);
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    background: var(--red-bg);
+    color: var(--red);
+    border: 1px solid rgba(155,44,44,0.2);
+  }
+  .badge-pago {
+    display: inline-block;
+    padding: 0.18rem 0.55rem;
+    border-radius: 20px;
+    font-size: 0.65rem;
+    font-family: var(--font-mono);
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    background: var(--green-bg);
+    color: var(--green);
+    border: 1px solid rgba(46,125,82,0.2);
+  }
+  /* ─── ABERTO: FILTER TABS ───────────────────────────── */
+  .aberto-filter-btn {
+    padding: 0.3rem 0.85rem;
+    border: 1px solid var(--gray-m);
+    background: transparent;
+    color: var(--gray-d);
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    border-radius: 20px;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .aberto-filter-btn:hover { border-color: var(--gold); color: var(--navy); }
+  .aberto-filter-btn.active { background: var(--navy); color: var(--gold); border-color: var(--navy); }
+  /* ─── UNDO PAID BUTTON ──────────────────────────────── */
+  .row-undo-btn {
+    background: none; border: none; cursor: pointer;
+    font-size: 0.85rem; padding: 0.2rem 0.35rem;
+    color: var(--green); opacity: 0.7;
+    border-radius: 3px; transition: opacity 0.15s, background 0.15s;
+  }
+  .row-undo-btn:hover { opacity: 1; background: var(--green-bg); }
+
+  /* ─── PAGE: CLIENTES ────────────────────────────────── */
+  .clientes-header {
+    background: linear-gradient(135deg, var(--navy) 0%, var(--navy-light) 100%);
+    padding: 2.5rem 2.5rem 2rem;
+    border-bottom: 2px solid var(--gold);
+  }
+  .clientes-cards {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1.25rem;
+    padding: 1.75rem 2.5rem 0;
+    background: var(--cream);
+  }
+  .clientes-table-wrap {
+    padding: 1rem 2.5rem 2.5rem;
+  }
+  .rank-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.5rem;
+    height: 1.5rem;
+    border-radius: 50%;
+    font-family: var(--font-mono);
+    font-size: 0.65rem;
+    font-weight: 700;
+  }
+  .rank-1 { background: #FFD700; color: #7A5800; }
+  .rank-2 { background: #C0C0C0; color: #444; }
+  .rank-3 { background: #CD7F32; color: #5A2D00; }
+  .rank-other { background: var(--gray-l); color: var(--gray-d); }
+  .recibo-list {
+    font-family: var(--font-mono);
+    font-size: 0.68rem;
+    color: var(--gray-d);
+  }
+
+  /* ─── RESPONSIVIDADE TABLET ─────────────────────────── */
+  @media (max-width: 1024px) {
+    .layout { grid-template-columns: 200px 1fr; }
+    .sidebar { padding: 1.25rem 0; }
+    .resumo-cards, .clientes-cards { padding: 1.25rem 1.5rem; gap: 0.9rem; }
+    .resumo-header, .clientes-header, .month-header { padding: 1.75rem 1.5rem 1.5rem; }
+    .resumo-table-wrap, .clientes-table-wrap, .month-table-wrap { padding: 1rem 1.5rem 2rem; }
+    .chart-wrap { padding: 0 1.5rem 1.25rem; }
+    .month-toolbar { padding: 0.85rem 1.5rem; }
+  }
+
+  /* ─── RESPONSIVIDADE MOBILE ──────────────────────────── */
+  @media (max-width: 768px) {
+    .layout { grid-template-columns: 1fr; }
+    .topbar { padding: 0 0.85rem; height: 52px; }
+    .topbar-brand { font-size: 0.97rem; }
+    .topbar-brand span { display: none; }
+    .topbar-actions .btn-ghost { display: none; }
+    .topbar-actions .btn-gold { font-size: 0.72rem; padding: 0.5rem 0.85rem; }
+
+    .sidebar {
+      position: static;
+      height: auto;
+      flex-direction: row;
+      overflow-x: auto;
+      overflow-y: hidden;
+      padding: 0.25rem 0;
+      border-right: none;
+      border-bottom: 1px solid rgba(201,168,76,0.2);
+      scrollbar-width: none;
+    }
+    .sidebar::-webkit-scrollbar { display: none; }
+    .sidebar-label { display: none; }
+    .sidebar-bottom {
+      margin-top: 0;
+      padding: 0.25rem 0.75rem 0.25rem 0.25rem;
+      border-top: none;
+      border-left: 1px solid rgba(201,168,76,0.15);
+      display: flex;
+      align-items: center;
+      flex-shrink: 0;
+    }
+    #add-month-btn {
+      width: auto;
+      white-space: nowrap;
+      padding: 0.5rem 0.9rem;
+      font-size: 0.65rem;
+      border-radius: 3px;
+      min-height: 38px;
+    }
+    .month-tab {
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 0.55rem 0.85rem;
+      min-width: 72px;
+      min-height: 44px;
+      border-left: none;
+      border-bottom: 3px solid transparent;
+      flex-shrink: 0;
+    }
+    .month-tab.active {
+      border-left: none;
+      border-bottom-color: var(--gold);
+      background: rgba(201,168,76,0.08);
+    }
+    .month-tab-name { font-size: 0.72rem; text-align: center; line-height: 1.2; }
+    .month-tab-total { font-size: 0.58rem; }
+
+    /* Headers */
+    .resumo-header, .clientes-header, .month-header { padding: 1rem 0.9rem 0.85rem; }
+    .resumo-title { font-size: 1.45rem; }
+    .resumo-sub   { font-size: 0.78rem; margin-top: 0.25rem; }
+    .month-title  { font-size: 1.25rem; }
+    .month-header { flex-direction: column; align-items: flex-start; gap: 0.65rem; }
+    .month-total-chip { align-self: stretch; text-align: left; padding: 0.5rem 1rem; }
+    .month-total-value { font-size: 1.2rem; }
+
+    /* Clientes header: stack vertically */
+    .clientes-header { display: flex; flex-direction: column; gap: 0.75rem; }
+    .clientes-header > div:last-child { align-self: flex-start; }
+
+    /* Stats cards: 2 cols on medium phones, 1 col on small */
+    .resumo-cards, .clientes-cards {
+      grid-template-columns: repeat(2, 1fr);
+      padding: 0.85rem 0.9rem;
+      gap: 0.6rem;
+    }
+    .stat-card { padding: 0.9rem 1rem; }
+    .stat-value { font-size: 1.45rem; }
+    .stat-label { font-size: 0.62rem; }
+
+    /* Tables */
+    .resumo-table-wrap, .clientes-table-wrap, .month-table-wrap {
+      padding: 0.75rem 0.9rem 1.5rem;
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+    }
+    .chart-wrap { padding: 0 0.9rem 0.85rem; }
+    table { min-width: 0; width: 100%; font-size: 0.78rem; }
+    thead th { padding: 0.6rem 0.7rem; font-size: 0.72rem; }
+    tbody td { padding: 0.55rem 0.7rem; }
+
+    /* Hide less-important columns on month page */
+    #month-tbody tr td:nth-child(6), #month-tbody tr td:nth-child(7),
+    #month-tbody tr td:nth-child(9), #month-tbody tr td:nth-child(10),
+    #month-tbody tr td:nth-child(11),
+    #page-month thead th:nth-child(6), #page-month thead th:nth-child(7),
+    #page-month thead th:nth-child(9), #page-month thead th:nth-child(10),
+    #page-month thead th:nth-child(11) { display: none; }
+    #month-tbody tr td:nth-child(12) { display: table-cell; }
+    #page-month thead th:nth-child(12) { display: table-cell; }
+
+    /* Row actions: always visible on touch (no hover) */
+    .row-actions, .aberto-actions { opacity: 1; }
+    .row-action-btn, .row-edit, .row-paid-btn, .row-delete-btn, .row-undo-btn {
+      padding: 0.3rem 0.5rem;
+      font-size: 0.9rem;
+      min-width: 30px;
+      min-height: 30px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    /* Toolbar */
+    .month-toolbar { padding: 0.65rem 0.9rem; flex-wrap: wrap; gap: 0.5rem; }
+    .filter-input { width: 100%; order: -1; font-size: 0.82rem; padding: 0.55rem 0.85rem; }
+
+    /* Section title */
+    .section-title { font-size: 0.95rem; flex-direction: column; align-items: flex-start; gap: 0.15rem; }
+
+    /* Modal: bottom sheet */
+    .modal-overlay { align-items: flex-end; }
+    .modal {
+      max-width: 100% !important;
+      border-radius: 14px 14px 0 0;
+      max-height: 92vh;
+      overflow-y: auto;
+    }
+    .modal-body { padding: 1rem 1rem 0.5rem; }
+    .modal-footer { padding: 0.75rem 1rem 1.25rem; }
+
+    /* Form */
+    .form-grid { grid-template-columns: 1fr; }
+    .form-group.full { grid-column: 1; }
+    input, select, textarea { font-size: 16px; } /* prevents iOS zoom on focus */
+
+    /* Hide extra columns on clientes page */
+    #clientes-tbody tr td:nth-child(4), #clientes-tbody tr td:nth-child(5),
+    .clientes-table-wrap table thead th:nth-child(4),
+    .clientes-table-wrap table thead th:nth-child(5) { display: none; }
+    #recibos-tbody tr td:nth-child(4), #recibos-tbody + thead th:nth-child(4) { display: none; }
+
+    .resumo-header { padding-bottom: 0.9rem; }
+
+    /* Buttons: slightly larger touch targets */
+    .btn { min-height: 36px; display: inline-flex; align-items: center; justify-content: center; }
+    .btn-danger, .btn-sm, .btn-pdf, .btn-excel, .btn-delete-paid {
+      min-height: 32px;
+    }
+
+    /* Edit-mode bar */
+    .edit-mode-bar { padding: 0.45rem 0.9rem; font-size: 0.65rem; }
+  }
+
+  /* ─── RESPONSIVIDADE MOBILE PEQUENO ──────────────────── */
+  @media (max-width: 480px) {
+    .resumo-cards, .clientes-cards { grid-template-columns: 1fr; gap: 0.55rem; }
+    .stat-value { font-size: 1.35rem; }
+    .month-toolbar { gap: 0.4rem; }
+    .month-toolbar .btn { flex: 1; text-align: center; }
+    .topbar-actions .btn-gold { font-size: 0.7rem; padding: 0.45rem 0.7rem; }
+  }
+
+  @media (max-width: 380px) {
+    .topbar-brand { font-size: 0.85rem; }
+    .btn { font-size: 0.67rem; padding: 0.4rem 0.7rem; }
+    .resumo-title { font-size: 1.2rem; }
+    .stat-value { font-size: 1.2rem; }
+    .month-title { font-size: 1.1rem; }
+  }
 </style>
 </head>
 <body>
@@ -591,7 +985,8 @@
     <span>Escritório de Advocacia Zveiter</span>
   </div>
   <div class="topbar-actions">
-    <button class="btn btn-ghost btn-sm" onclick="showPage('resumo')">Resumo Geral</button>
+    <button class="btn btn-ghost btn-sm" onclick="showPage('resumo')">Resumo</button>
+    <button class="btn btn-ghost btn-sm" onclick="showPage('clientes')">Em Aberto</button>
     <button class="btn btn-gold btn-sm" onclick="openAddEntry()">+ Lançamento</button>
   </div>
 </div>
@@ -603,6 +998,10 @@
     <div class="sidebar-label">Visão Geral</div>
     <div id="sidebar-resumo" class="month-tab active" onclick="showPage('resumo')">
       <span class="month-tab-name">Resumo</span>
+    </div>
+    <div id="sidebar-clientes" class="month-tab" onclick="showPage('clientes')">
+      <span class="month-tab-name">Em Aberto</span>
+      <span class="month-tab-total" style="color:rgba(155,44,44,0.7)">R$ 72.396</span>
     </div>
 
     <div class="sidebar-label" style="margin-top:1rem">Meses</div>
@@ -643,6 +1042,14 @@
         </div>
       </div>
 
+      <!-- GRÁFICO DE EVOLUÇÃO -->
+      <div class="chart-wrap">
+        <div class="chart-inner">
+          <div class="chart-title">Evolução Mensal (R$)</div>
+          <canvas id="chart-monthly"></canvas>
+        </div>
+      </div>
+
       <div class="resumo-table-wrap">
         <div class="section-title">
           Resumo por Mês
@@ -674,6 +1081,103 @@
       </div>
     </div><!-- /resumo -->
 
+    <!-- PAGE: CLIENTES EM ABERTO -->
+    <div id="page-clientes" class="page">
+      <div class="clientes-header">
+        <div>
+          <div class="resumo-title">Clientes em Aberto</div>
+          <div class="resumo-sub">Reembolsos pendentes · Sincronizado com Google Sheets</div>
+        </div>
+        <div style="display:flex;align-items:flex-end">
+          <button class="btn btn-gold btn-sm" onclick="openAddAberto()">+ Novo Recibo</button>
+        </div>
+      </div>
+
+      <div class="clientes-cards">
+        <div class="stat-card">
+          <div class="stat-label">Total em Aberto</div>
+          <div class="stat-value gold" id="aberto-stat-total">R$ 0,00</div>
+          <div class="stat-sub" id="aberto-stat-clientes">0 clientes</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Maior Devedor</div>
+          <div class="stat-value" style="font-size:1.3rem" id="aberto-stat-devedor">—</div>
+          <div class="stat-sub" id="aberto-stat-devedor-val">—</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Recibos em Aberto</div>
+          <div class="stat-value" id="aberto-stat-count">0</div>
+          <div class="stat-sub" id="aberto-stat-desde">—</div>
+        </div>
+        <div class="stat-card" style="border-left:3px solid var(--green)">
+          <div class="stat-label">Total Recebido</div>
+          <div class="stat-value" style="color:var(--green);font-size:1.3rem" id="aberto-stat-pago">R$ 0,00</div>
+          <div class="stat-sub" id="aberto-stat-pago-count">0 recibos pagos</div>
+        </div>
+      </div>
+
+      <div class="clientes-table-wrap" style="margin-top:1.5rem">
+        <div class="section-title">
+          Total por Cliente
+          <span class="section-title-sub">ordenado por valor em aberto</span>
+        </div>
+        <table>
+          <thead>
+            <tr>
+              <th class="center">#</th>
+              <th>Cliente</th>
+              <th class="right">Total em Aberto</th>
+              <th>Recibos</th>
+              <th>Período</th>
+            </tr>
+          </thead>
+          <tbody id="clientes-tbody"></tbody>
+          <tfoot>
+            <tr>
+              <td colspan="2"><strong>TOTAL GERAL</strong></td>
+              <td class="right"><strong id="aberto-tfoot-total">R$ 0,00</strong></td>
+              <td colspan="2"></td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+
+      <div class="clientes-table-wrap">
+        <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:0.75rem;margin-bottom:1rem">
+          <div class="section-title" style="margin-bottom:0">
+            Lançamentos
+            <span class="section-title-sub">clique numa linha para editar</span>
+          </div>
+          <div style="display:flex;gap:0.4rem">
+            <button class="aberto-filter-btn active" id="aberto-filter-todos"   onclick="setAbertoFilter('todos')">Todos</button>
+            <button class="aberto-filter-btn"        id="aberto-filter-aberto"  onclick="setAbertoFilter('aberto')">Em Aberto</button>
+            <button class="aberto-filter-btn"        id="aberto-filter-pago"    onclick="setAbertoFilter('pago')">Pagos</button>
+          </div>
+        </div>
+        <table>
+          <thead>
+            <tr>
+              <th>Recibo</th>
+              <th>Cliente</th>
+              <th class="right">Valor (R$)</th>
+              <th>Data</th>
+              <th class="center">Status</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="recibos-tbody"></tbody>
+        </table>
+        <div id="aberto-loading" style="text-align:center;padding:2rem;color:var(--gray-d);font-family:var(--font-mono);font-size:0.78rem;display:none">
+          Carregando da planilha…
+        </div>
+        <div id="aberto-empty" class="empty-state" style="display:none">
+          <div class="empty-icon">📂</div>
+          <div class="empty-title">Nenhum recibo em aberto</div>
+          <div class="empty-sub">Clique em <strong>+ Novo Recibo</strong> para adicionar.</div>
+        </div>
+      </div>
+    </div><!-- /clientes -->
+
     <!-- PAGE: MONTH (dynamic) -->
     <div id="page-month" class="page">
       <div class="month-header">
@@ -688,8 +1192,14 @@
       </div>
 
       <div class="month-toolbar">
-        <input type="text" class="filter-input" id="month-filter" placeholder="Filtrar por cliente, processo…" oninput="filterTable()">
+        <input type="text" class="filter-input" id="month-filter" placeholder="Filtrar por processo, GRERJ…" oninput="filterTable()">
+        <select class="filter-input" id="month-client-filter" onchange="filterTable()" style="max-width:200px;cursor:pointer">
+          <option value="">Todos os clientes</option>
+        </select>
         <button class="btn btn-gold btn-sm" onclick="openAddEntry()">+ Lançamento</button>
+        <button class="btn btn-pdf btn-sm" onclick="exportMonthPDF()">⬇ PDF</button>
+        <button class="btn btn-excel btn-sm" onclick="exportMonthExcel()">⬇ Excel</button>
+        <button class="btn btn-delete-paid btn-sm" id="btn-delete-paid" onclick="deletePaidEntries()" style="display:none">🗑 Excluir Pagos</button>
         <button class="btn btn-outline btn-sm" onclick="openDeleteMonth()">Excluir Mês</button>
       </div>
 
@@ -706,6 +1216,7 @@
               <th>Tipo de Custas</th>
               <th class="center">Reimb.</th>
               <th class="center">Status</th>
+              <th class="center">Obs.</th>
               <th></th>
             </tr>
           </thead>
@@ -748,18 +1259,21 @@
       </div>
     </div>
     <div class="modal-footer">
-      <button class="btn btn-ghost" onclick="closeModal('modal-addmonth')" style="color:var(--navy); background:transparent; border:1px solid var(--gray-m)">Cancelar</button>
+      <button class="btn" onclick="closeModal('modal-addmonth')" style="color:var(--navy); background:transparent; border:1px solid var(--gray-m)">Cancelar</button>
       <button class="btn btn-gold" onclick="confirmAddMonth()">Criar Mês</button>
     </div>
   </div>
 </div>
 
-<!-- MODAL: ADD ENTRY -->
+<!-- MODAL: ADD / EDIT ENTRY -->
 <div class="modal-overlay" id="modal-addentry">
   <div class="modal" style="max-width:640px">
     <div class="modal-header">
       <span class="modal-title" id="modal-entry-title">Novo Lançamento</span>
-      <button class="modal-close" onclick="closeModal('modal-addentry')">×</button>
+      <button class="modal-close" onclick="closeEntryModal()">×</button>
+    </div>
+    <div id="edit-mode-bar" class="edit-mode-bar" style="display:none">
+      ✏️ Modo edição — alterações serão salvas na planilha do Google
     </div>
     <div class="modal-body">
       <div class="form-grid">
@@ -821,48 +1335,96 @@
             <option>CANCELADO</option>
           </select>
         </div>
+        <div class="form-group full">
+          <label>Observações</label>
+          <textarea id="entry-obs" placeholder="Observações sobre este lançamento…"></textarea>
+        </div>
       </div>
     </div>
     <div class="modal-footer">
-      <button class="btn" onclick="closeModal('modal-addentry')" style="color:var(--navy); background:transparent; border:1px solid var(--gray-m)">Cancelar</button>
-      <button class="btn btn-gold" onclick="confirmAddEntry()">Salvar Lançamento</button>
+      <button class="btn" onclick="closeEntryModal()" style="color:var(--navy); background:transparent; border:1px solid var(--gray-m)">Cancelar</button>
+      <button class="btn btn-gold" id="modal-entry-save-btn" onclick="confirmSaveEntry()">Salvar Lançamento</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: ADD / EDIT RECIBO EM ABERTO -->
+<div class="modal-overlay" id="modal-aberto">
+  <div class="modal" style="max-width:500px">
+    <div class="modal-header">
+      <span class="modal-title" id="modal-aberto-title">Novo Recibo em Aberto</span>
+      <button class="modal-close" onclick="closeModal('modal-aberto')">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-grid">
+        <div class="form-group full">
+          <label>Cliente</label>
+          <input type="text" id="aberto-cliente" placeholder="Nome do cliente" list="aberto-clientes-list">
+          <datalist id="aberto-clientes-list"></datalist>
+        </div>
+        <div class="form-group">
+          <label>Nº do Recibo / Referência</label>
+          <input type="text" id="aberto-recibo" placeholder="Ex: 8050">
+        </div>
+        <div class="form-group">
+          <label>Data</label>
+          <input type="date" id="aberto-data">
+        </div>
+        <div class="form-group full">
+          <label>Valor (R$)</label>
+          <input type="number" id="aberto-valor" placeholder="0,00" step="0.01" min="0">
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal('modal-aberto')" style="color:var(--navy);background:transparent;border:1px solid var(--gray-m)">Cancelar</button>
+      <button class="btn btn-gold" id="aberto-save-btn" onclick="confirmSaveAberto()">Salvar Recibo</button>
     </div>
   </div>
 </div>
 
 <script>
 // ─────────────────────────────────────────────────────────
-// STATE E CONFIGURAÇÃO DA NUVEM (API STRICT MODE)
+// CONFIG
 // ─────────────────────────────────────────────────────────
 const API_URL = 'https://sheetdb.io/api/v1/2udn9s4iopfks';
 
 let state = {
   months: [],
   currentMonth: null,
+  editingId: null,       // null = novo lançamento | number = editando
+  editingMonthId: null,  // mes_id do lançamento sendo editado
+  clientesAberto: [],    // carregado do SheetDB (aba Em_Aberto)
+  editingAbertoId: null, // id do recibo sendo editado
+  abertoFilter: 'todos', // 'todos' | 'aberto' | 'pago'
 };
+
+// URL da aba Em_Aberto (mesmo SheetDB, sheet diferente)
+const API_ABERTO = `${API_URL}?sheet=Em_Aberto`;
 
 // ─────────────────────────────────────────────────────────
 // COMUNICAÇÃO COM A NUVEM
 // ─────────────────────────────────────────────────────────
 async function loadState() {
-  document.getElementById('stat-total').textContent = "Carregando a nuvem...";
-
+  document.getElementById('stat-total').textContent = "Carregando…";
   try {
-    const response = await fetch(API_URL);
+    // Carrega Base_de_Dados e Em_Aberto em paralelo
+    const [response, responseAberto] = await Promise.all([
+      fetch(API_URL),
+      fetch(API_ABERTO),
+    ]);
+
     if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
     const data = await response.json();
 
     const monthsMap = {};
-    
     data.forEach(row => {
-      if (!row.mes_id) return; // Ignora linhas em branco
-      
+      if (!row.mes_id) return;
       if (!monthsMap[row.mes_id]) {
         const parts = row.mes_id.split('-');
         const label = parts.length === 2 ? `${parts[0]} / 20${parts[1]}` : row.mes_id;
         monthsMap[row.mes_id] = { id: row.mes_id, label: label, entries: [] };
       }
-      
       if (row.grerj || row.cliente || row.valor) {
         monthsMap[row.mes_id].entries.push({
           id: parseInt(row.id),
@@ -870,33 +1432,78 @@ async function loadState() {
           date: row.data || '',
           tipo: row.tipo || '',
           cliente: row.cliente || '',
-          valor: parseFloat(row.valor) || 0,
+          valor: parseValor(row.valor),
           processo: row.processo || '',
           classe: row.classe || '',
           parte: row.parte || '',
           reimb: row.reembolsavel || '',
-          status: row.status || ''
+          status: row.status || '',
+          obs: row.obs || '',
         });
       }
     });
 
     state.months = Object.values(monthsMap);
+
+    // Carrega Em_Aberto
+    if (responseAberto.ok) {
+      const dataAberto = await responseAberto.json();
+      state.clientesAberto = dataAberto.map(row => {
+        // normaliza chaves: remove espaços e converte para minúsculas
+        const r = {};
+        Object.keys(row).forEach(k => { r[k.trim().toLowerCase()] = row[k]; });
+        return {
+          id: parseInt(r.id),
+          cliente: r.cliente || '',
+          recibo: r.recibo || r.nº || r['nº do recibo'] || '',
+          data: r.data || '',
+          valor: parseValor(r.valor),
+          status: (r.status || '').toUpperCase(),
+        };
+      }).filter(r => r.cliente && r.cliente.trim() !== '');
+    } else {
+      console.warn('Aba Em_Aberto não encontrada. Crie a aba no Google Sheets.');
+      state.clientesAberto = [];
+    }
+
     renderSidebar();
     renderResumo();
+    renderClientes();
     if (state.currentMonth) showMonth(state.currentMonth);
 
   } catch (error) {
-    console.error("Falha ao puxar dados da API:", error);
-    alert('Erro de conexão. O painel não conseguiu ler a planilha do Google.');
+    console.error("Falha ao conectar com o SheetDB:", error);
+    document.getElementById('stat-total').textContent = "Erro de conexão";
+    alert('Erro de conexão. Abra o dashboard via Live Server (VS Code) ou servidor HTTP — não pelo explorador de arquivos.');
   }
 }
 
 // ─────────────────────────────────────────────────────────
-// FORMATTING & RENDER
+// FORMATTING
 // ─────────────────────────────────────────────────────────
 function formatBRL(v) {
   if (!v && v !== 0) return '—';
   return new Intl.NumberFormat('pt-BR', {style:'currency', currency:'BRL'}).format(v);
+}
+
+// Lida com qualquer formato que o SheetDB retorne:
+// número puro (3112.69), formato inglês ("3,112.69"), formato BR ("3.112,69"), com/sem R$
+function parseValor(v) {
+  if (typeof v === 'number') return v;
+  if (!v) return 0;
+  let s = String(v).replace(/R\$\s*/g,'').trim();
+  const commaIdx = s.lastIndexOf(',');
+  const dotIdx   = s.lastIndexOf('.');
+  if (commaIdx === -1 && dotIdx === -1) return parseFloat(s) || 0;
+  if (commaIdx === -1) return parseFloat(s) || 0;              // só ponto: 1234.56
+  if (dotIdx === -1)   return parseFloat(s.replace(',','.')) || 0; // só vírgula: 1234,56
+  if (dotIdx > commaIdx) {
+    // inglês: "3,112.69" → remove vírgula
+    return parseFloat(s.replace(/,/g,'')) || 0;
+  } else {
+    // BR: "3.112,69" → remove ponto, vírgula vira ponto
+    return parseFloat(s.replace(/\./g,'').replace(',','.')) || 0;
+  }
 }
 function formatDate(d) {
   if (!d) return '—';
@@ -906,7 +1513,8 @@ function formatDate(d) {
 }
 function tipoBadge(tipo) {
   if (!tipo) return '<span class="badge badge-gray">—</span>';
-  const cls = tipo.toUpperCase()==='GRERJ'?'tipo-grerj':tipo.toUpperCase()==='GRU'?'tipo-gru':tipo.toUpperCase()==='DEPÓSITO'?'tipo-dep':tipo.toUpperCase().includes('CERTID')?'tipo-cert':'tipo-other';
+  const t = tipo.toUpperCase().trim();
+  const cls = t==='GRERJ'?'tipo-grerj':t==='GRU'?'tipo-gru':t==='DEPÓSITO'?'tipo-dep':t.includes('CERTID')?'tipo-cert':'tipo-other';
   return `<span class="badge ${cls}">${tipo}</span>`;
 }
 function reimbBadge(r) {
@@ -920,38 +1528,133 @@ function statusBadge(s) {
   return `<span class="badge badge-orange">${s}</span>`;
 }
 
+// ─────────────────────────────────────────────────────────
+// RENDER SIDEBAR
+// ─────────────────────────────────────────────────────────
 function renderSidebar() {
+  // Atualiza total do "Em Aberto" na sidebar
+  const totalAberto = state.clientesAberto.reduce((s,r) => s + r.valor, 0);
+  const sideAberto = document.getElementById('sidebar-clientes').querySelector('.month-tab-total');
+  if (sideAberto) sideAberto.textContent = totalAberto > 0 ? formatBRL(totalAberto) : '';
+
   const el = document.getElementById('month-tabs');
   el.innerHTML = state.months.map(m => {
-    const total = m.entries.reduce((s,e) => s + (parseFloat(e.valor)||0), 0);
+    const total = m.entries.reduce((s,e) => s + (parseValor(e.valor)), 0);
     const active = state.currentMonth === m.id ? 'active' : '';
+    const name = m.label.split('/')[0].trim().split(' ')[0];
+    const yr = m.label.split('/')[1]?.trim() || '';
     return `<div class="month-tab ${active}" onclick="showMonth('${m.id}')">
-      <span class="month-tab-name">${m.label.replace(' / ','\n').split('\n')[0].split(' ')[0]}<br><small style="font-size:0.7rem;opacity:0.6">${m.label.split('/')[1]?.trim()||''}</small></span>
+      <span class="month-tab-name">${name}<br><small style="font-size:0.7rem;opacity:0.6">${yr}</small></span>
       <span class="month-tab-total">${formatBRL(total)}</span>
     </div>`;
   }).join('');
 }
 
+// ─────────────────────────────────────────────────────────
+// RENDER RESUMO + GRÁFICO
+// ─────────────────────────────────────────────────────────
+let chartInstance = null;
+
+function renderChart(labels, values, reimbVals, nreimbVals) {
+  const ctx = document.getElementById('chart-monthly').getContext('2d');
+  if (chartInstance) chartInstance.destroy();
+  chartInstance = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [
+        {
+          label: 'Total',
+          data: values,
+          backgroundColor: 'rgba(201,168,76,0.75)',
+          borderColor: 'rgba(201,168,76,1)',
+          borderWidth: 1,
+          borderRadius: 3,
+        },
+        {
+          label: 'Reembolsável',
+          data: reimbVals,
+          backgroundColor: 'rgba(46,125,82,0.55)',
+          borderColor: 'rgba(46,125,82,0.8)',
+          borderWidth: 1,
+          borderRadius: 3,
+        },
+        {
+          label: 'Não Reimb.',
+          data: nreimbVals,
+          backgroundColor: 'rgba(155,44,44,0.45)',
+          borderColor: 'rgba(155,44,44,0.7)',
+          borderWidth: 1,
+          borderRadius: 3,
+        },
+      ]
+    },
+    options: {
+      responsive: true,
+      interaction: { mode: 'index', intersect: false },
+      plugins: {
+        legend: {
+          display: true,
+          position: 'top',
+          labels: {
+            font: { family: 'DM Mono', size: 10 },
+            color: '#7A7870',
+            boxWidth: 12,
+            padding: 14,
+          }
+        },
+        tooltip: {
+          callbacks: {
+            label: ctx => `${ctx.dataset.label}: ${formatBRL(ctx.raw)}`
+          }
+        }
+      },
+      scales: {
+        y: {
+          ticks: {
+            callback: val => formatBRL(val),
+            font: { family: 'DM Mono', size: 9 },
+            color: '#7A7870',
+          },
+          grid: { color: 'rgba(0,0,0,0.05)' }
+        },
+        x: {
+          ticks: {
+            font: { family: 'DM Mono', size: 9 },
+            color: '#7A7870',
+          },
+          grid: { display: false }
+        }
+      }
+    }
+  });
+}
+
 function renderResumo() {
-  let grandTotal = 0, grandCount = 0;
-  let grandReimb = 0, grandNReimb = 0;
-  let maxMonth = null, maxVal = 0;
-  let prevTotal = null;
+  let grandTotal=0, grandCount=0, grandReimb=0, grandNReimb=0;
+  let maxMonth=null, maxVal=0, prevTotal=null;
+
+  const chartLabels = [], chartVals = [], chartReimb = [], chartNReimb = [];
 
   const rows = state.months.map(m => {
-    const total = m.entries.reduce((s,e) => s+(parseFloat(e.valor)||0),0);
-    const reimb = m.entries.filter(e=>e.reimb.toUpperCase()==='SIM').reduce((s,e)=>s+(parseFloat(e.valor)||0),0);
-    const nreimb = m.entries.filter(e=>e.reimb.toUpperCase()==='NÃO' || e.reimb.toUpperCase()==='NAO').reduce((s,e)=>s+(parseFloat(e.valor)||0),0);
-    grandTotal += total; grandCount += m.entries.length;
-    grandReimb += reimb; grandNReimb += nreimb;
-    if (total > maxVal) { maxVal = total; maxMonth = m.label; }
+    const total = m.entries.reduce((s,e)=>s+(parseValor(e.valor)),0);
+    const reimb = m.entries.filter(e=>(e.reimb||'').toUpperCase()==='SIM').reduce((s,e)=>s+(parseValor(e.valor)),0);
+    const nreimb = m.entries.filter(e=>{const r=(e.reimb||'').toUpperCase();return r==='NÃO'||r==='NAO';}).reduce((s,e)=>s+(parseValor(e.valor)),0);
+    grandTotal+=total; grandCount+=m.entries.length; grandReimb+=reimb; grandNReimb+=nreimb;
+    if(total>maxVal){maxVal=total;maxMonth=m.label;}
 
-    let varHtml = '<span style="color:var(--gray-d)">—</span>';
-    if (prevTotal !== null && prevTotal > 0 && total > 0) {
-      const pct = ((total-prevTotal)/prevTotal*100);
-      varHtml = pct >= 0 ? `<span class="var-up">▲ ${pct.toFixed(1)}%</span>` : `<span class="var-down">▼ ${Math.abs(pct).toFixed(1)}%</span>`;
+    // Dados para gráfico
+    chartLabels.push(m.label.split('/')[0].trim());
+    chartVals.push(total);
+    chartReimb.push(reimb);
+    chartNReimb.push(nreimb);
+
+    let varHtml='<span style="color:var(--gray-d)">—</span>';
+    if(prevTotal!==null&&prevTotal>0&&total>0){
+      const pct=((total-prevTotal)/prevTotal*100);
+      varHtml=pct>=0?`<span class="var-up">▲ ${pct.toFixed(1)}%</span>`:`<span class="var-down">▼ ${Math.abs(pct).toFixed(1)}%</span>`;
     }
-    if (total > 0) prevTotal = total;
+    if(total>0) prevTotal=total;
 
     return `<tr onclick="showMonth('${m.id}')" style="cursor:pointer">
       <td><strong>${m.label}</strong></td>
@@ -974,41 +1677,480 @@ function renderResumo() {
   document.getElementById('tfoot-total').textContent = formatBRL(grandTotal);
   document.getElementById('tfoot-reimb').textContent = formatBRL(grandReimb);
   document.getElementById('tfoot-nreimb').textContent = formatBRL(grandNReimb);
+
+  if (chartLabels.length > 0) renderChart(chartLabels, chartVals, chartReimb, chartNReimb);
 }
 
-function renderMonthTable(filter='') {
+// ─────────────────────────────────────────────────────────
+// RENDER CLIENTES EM ABERTO (dinâmico, vem do SheetDB)
+// ─────────────────────────────────────────────────────────
+function renderClientes() {
+  const recibos = state.clientesAberto;
+
+  const empty = document.getElementById('aberto-empty');
+  const loading = document.getElementById('aberto-loading');
+  loading.style.display = 'none';
+
+  // Separar pagos e em aberto
+  const emAberto = recibos.filter(r => r.status !== 'PAGO');
+  const pagos    = recibos.filter(r => r.status === 'PAGO');
+
+  // Agrupar EM ABERTO por cliente
+  const byCliente = {};
+  emAberto.forEach(r => {
+    if (!byCliente[r.cliente]) byCliente[r.cliente] = [];
+    byCliente[r.cliente].push(r);
+  });
+
+  // Ordenar clientes por total desc
+  const clientes = Object.entries(byCliente).map(([nome, rs]) => ({
+    nome,
+    total: rs.reduce((s, r) => s + r.valor, 0),
+    recibos: rs.sort((a,b) => a.data.localeCompare(b.data)),
+  })).sort((a,b) => b.total - a.total);
+
+  const grandTotal = clientes.reduce((s,c) => s + c.total, 0);
+
+  // Stats — pagos
+  const totalPago = pagos.reduce((s,r) => s + r.valor, 0);
+  document.getElementById('aberto-stat-pago').textContent = formatBRL(totalPago);
+  document.getElementById('aberto-stat-pago-count').textContent = `${pagos.length} recibo${pagos.length!==1?'s':''} pago${pagos.length!==1?'s':''}`;
+
+  // Stats — em aberto
+  document.getElementById('aberto-stat-total').textContent = formatBRL(grandTotal);
+  document.getElementById('aberto-stat-clientes').textContent = `${clientes.length} cliente${clientes.length!==1?'s':''}`;
+  document.getElementById('aberto-tfoot-total').textContent = formatBRL(grandTotal);
+
+  if (clientes.length > 0) {
+    document.getElementById('aberto-stat-devedor').textContent = clientes[0].nome;
+    document.getElementById('aberto-stat-devedor-val').textContent = formatBRL(clientes[0].total);
+  } else {
+    document.getElementById('aberto-stat-devedor').textContent = '—';
+    document.getElementById('aberto-stat-devedor-val').textContent = '—';
+  }
+
+  document.getElementById('aberto-stat-count').textContent = emAberto.length;
+
+  // Data mais antiga (só em aberto)
+  if (emAberto.length > 0) {
+    const sorted = [...emAberto].sort((a,b) => {
+      const da = a.data.includes('-') ? a.data : a.data.split('/').reverse().join('-');
+      const db = b.data.includes('-') ? b.data : b.data.split('/').reverse().join('-');
+      return da.localeCompare(db);
+    });
+    document.getElementById('aberto-stat-desde').textContent = `desde ${sorted[0].data}`;
+  } else {
+    document.getElementById('aberto-stat-desde').textContent = '—';
+  }
+
+  // Tabela por cliente
+  const tbody = document.getElementById('clientes-tbody');
+  if (clientes.length === 0) {
+    tbody.innerHTML = '';
+    empty.style.display = '';
+  } else {
+    empty.style.display = 'none';
+    tbody.innerHTML = clientes.map((c, i) => {
+      const rank = i===0?'rank-1':i===1?'rank-2':i===2?'rank-3':'rank-other';
+      const recNums = c.recibos.map(r=>r.recibo).join(', ');
+      const datas = c.recibos.map(r=>r.data);
+      const periodo = datas.length > 0 ? `${datas[0]} – ${datas[datas.length-1]}` : '—';
+      return `<tr>
+        <td class="center"><span class="rank-badge ${rank}">${i+1}</span></td>
+        <td><strong>${c.nome}</strong></td>
+        <td class="right"><strong style="color:var(--red)">${formatBRL(c.total)}</strong></td>
+        <td><span class="recibo-list">${recNums}</span></td>
+        <td class="mono" style="font-size:0.72rem;color:var(--gray-d)">${periodo}</td>
+      </tr>`;
+    }).join('');
+  }
+
+  // Tabela geral de recibos — filtrar por estado
+  const filtroAtivo = state.abertoFilter || 'todos';
+  const recibosVisiveis = [...recibos]
+    .filter(r => filtroAtivo === 'todos' || (filtroAtivo === 'pago' ? r.status === 'PAGO' : r.status !== 'PAGO'))
+    .sort((a,b) => {
+      const da = a.data.includes('-') ? a.data : a.data.split('/').reverse().join('-');
+      const db = b.data.includes('-') ? b.data : b.data.split('/').reverse().join('-');
+      return da.localeCompare(db);
+    });
+
+  // Atualizar datalist de sugestões de clientes
+  const uniqueClientes = [...new Set(recibos.map(r=>r.cliente))].sort();
+  document.getElementById('aberto-clientes-list').innerHTML =
+    uniqueClientes.map(c=>`<option value="${c}">`).join('');
+
+  document.getElementById('recibos-tbody').innerHTML = recibosVisiveis.map(r => {
+    const isPago = r.status === 'PAGO';
+    return `
+    <tr onclick="openEditAberto(${r.id})" style="cursor:pointer" class="${isPago?'row-pago':''}">
+      <td class="mono"><strong>${r.recibo || '—'}</strong></td>
+      <td>${r.cliente}</td>
+      <td class="right"><strong style="${isPago?'text-decoration:line-through;color:var(--gray-d)':''}">${formatBRL(r.valor)}</strong></td>
+      <td class="mono" style="font-size:0.75rem">${r.data || '—'}</td>
+      <td class="center"><span class="${isPago?'badge-pago':'badge-aberto'}">${isPago?'PAGO':'EM ABERTO'}</span></td>
+      <td>
+        <div class="aberto-actions">
+          ${!isPago
+            ? `<button class="row-action-btn row-paid-btn" onclick="markAbertoAsPaid(${r.id},event)" title="Marcar como Pago">✓ Pago</button>`
+            : `<button class="row-undo-btn" onclick="undoAbertoPayment(${r.id},event)" title="Desfazer pagamento">↩ Reabrir</button>`}
+          <button class="row-action-btn row-edit" onclick="openEditAberto(${r.id},event)" title="Editar">✏️</button>
+          <button class="row-action-btn row-delete-btn" onclick="deleteAberto(${r.id},event)" title="Excluir">✕</button>
+        </div>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+// ─────────────────────────────────────────────────────────
+// CRUD EM ABERTO
+// ─────────────────────────────────────────────────────────
+function openAddAberto() {
+  state.editingAbertoId = null;
+  document.getElementById('modal-aberto-title').textContent = 'Novo Recibo em Aberto';
+  document.getElementById('aberto-save-btn').textContent = 'Salvar Recibo';
+  document.getElementById('aberto-cliente').value = '';
+  document.getElementById('aberto-recibo').value = '';
+  document.getElementById('aberto-data').value = new Date().toISOString().slice(0,10);
+  document.getElementById('aberto-valor').value = '';
+  openModal('modal-aberto');
+}
+
+function openEditAberto(id, evt) {
+  if (evt) evt.stopPropagation();
+  const r = state.clientesAberto.find(r=>r.id===id);
+  if (!r) return;
+  state.editingAbertoId = id;
+  document.getElementById('modal-aberto-title').textContent = 'Editar Recibo em Aberto';
+  document.getElementById('aberto-save-btn').textContent = 'Atualizar Recibo';
+  document.getElementById('aberto-cliente').value = r.cliente;
+  document.getElementById('aberto-recibo').value = r.recibo;
+  // Converter data DD/MM/YYYY → YYYY-MM-DD se necessário
+  let dataVal = r.data;
+  if (r.data && r.data.includes('/')) {
+    const [d, m, y] = r.data.split('/');
+    dataVal = `${y}-${m}-${d}`;
+  }
+  document.getElementById('aberto-data').value = dataVal;
+  document.getElementById('aberto-valor').value = r.valor;
+  openModal('modal-aberto');
+}
+
+async function confirmSaveAberto() {
+  const cliente = document.getElementById('aberto-cliente').value.trim();
+  const recibo  = document.getElementById('aberto-recibo').value.trim();
+  const valor   = parseFloat(document.getElementById('aberto-valor').value);
+  const dataRaw = document.getElementById('aberto-data').value; // YYYY-MM-DD
+
+  if (!cliente) { alert('Informe o nome do cliente.'); return; }
+  if (isNaN(valor) || valor <= 0) { alert('Informe um valor válido.'); return; }
+
+  // Armazenar data no formato DD/MM/YYYY para compatibilidade com a planilha
+  let dataFormatada = dataRaw;
+  if (dataRaw && dataRaw.includes('-')) {
+    const [y,m,d] = dataRaw.split('-');
+    dataFormatada = `${d}/${m}/${y}`;
+  }
+
+  const btn = document.getElementById('aberto-save-btn');
+  const txtOriginal = btn.textContent;
+  btn.textContent = 'Salvando…';
+  btn.disabled = true;
+
+  try {
+    if (state.editingAbertoId !== null) {
+      // EDITAR (PATCH)
+      const response = await fetch(`${API_URL}/id/${state.editingAbertoId}?sheet=Em_Aberto`, {
+        method: 'PATCH',
+        headers: { 'Accept': 'application/json', 'Content-Type': 'application/json' },
+        body: JSON.stringify({ data: { cliente, recibo, data: dataFormatada, valor } })
+      });
+      if (!response.ok) throw new Error("Falha no PATCH");
+      const entry = state.clientesAberto.find(r=>r.id===state.editingAbertoId);
+      if (entry) { entry.cliente=cliente; entry.recibo=recibo; entry.data=dataFormatada; entry.valor=valor; }
+    } else {
+      // NOVO (POST)
+      const newId = Date.now();
+      const response = await fetch(API_ABERTO, {
+        method: 'POST',
+        headers: { 'Accept': 'application/json', 'Content-Type': 'application/json' },
+        body: JSON.stringify({ data: [{ id: newId, cliente, recibo, data: dataFormatada, valor }] })
+      });
+      if (!response.ok) throw new Error("Falha no POST");
+      state.clientesAberto.push({ id: newId, cliente, recibo, data: dataFormatada, valor });
+    }
+
+    closeModal('modal-aberto');
+    state.editingAbertoId = null;
+    renderClientes();
+    renderSidebar();
+  } catch(e) {
+    console.error(e);
+    alert("Erro ao salvar. Verifique se a aba 'Em_Aberto' existe na planilha e se o SheetDB tem permissão de escrita.");
+  } finally {
+    btn.textContent = txtOriginal;
+    btn.disabled = false;
+  }
+}
+
+function setAbertoFilter(filtro) {
+  state.abertoFilter = filtro;
+  ['todos','aberto','pago'].forEach(f => {
+    document.getElementById(`aberto-filter-${f}`)?.classList.toggle('active', f === filtro);
+  });
+  renderClientes();
+}
+
+async function markAbertoAsPaid(id, evt) {
+  if (evt) evt.stopPropagation();
+  const r = state.clientesAberto.find(r=>r.id===id);
+  if (!r || r.status === 'PAGO') return;
+  if (!confirm(`Marcar recibo ${r.recibo} de ${r.cliente} como PAGO?\n\n${formatBRL(r.valor)}`)) return;
+  try {
+    const res = await fetch(`${API_URL}/id/${id}?sheet=Em_Aberto`, {
+      method: 'PATCH',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ data: { status: 'PAGO' } })
+    });
+    if (res.ok) {
+      r.status = 'PAGO';
+      renderClientes();
+    } else {
+      alert('Erro ao atualizar. Verifique se a coluna "status" existe na aba Em_Aberto do Google Sheets.');
+    }
+  } catch(e) {
+    alert('Erro de rede: ' + e.message);
+  }
+}
+
+async function undoAbertoPayment(id, evt) {
+  if (evt) evt.stopPropagation();
+  const r = state.clientesAberto.find(r=>r.id===id);
+  if (!r || r.status !== 'PAGO') return;
+  if (!confirm(`Reabrir recibo ${r.recibo} de ${r.cliente}?\n\nO pagamento será desfeito e o valor voltará ao saldo em aberto.`)) return;
+  try {
+    const res = await fetch(`${API_URL}/id/${id}?sheet=Em_Aberto`, {
+      method: 'PATCH',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ data: { status: '' } })
+    });
+    if (res.ok) {
+      r.status = '';
+      renderClientes();
+    } else {
+      alert('Erro ao reabrir recibo.');
+    }
+  } catch(e) {
+    alert('Erro de rede: ' + e.message);
+  }
+}
+
+async function deleteAberto(id, evt) {
+  if (evt) evt.stopPropagation();
+  const r = state.clientesAberto.find(r=>r.id===id);
+  if (!r) return;
+  if (!confirm(`Excluir recibo ${r.recibo||id} de ${r.cliente}?\n\nValor: ${formatBRL(r.valor)}`)) return;
+
+  const btn = evt ? evt.target : null;
+  if (btn) btn.textContent = '⏳';
+
+  try {
+    const response = await fetch(`${API_URL}/id/${id}?sheet=Em_Aberto`, {
+      method: 'DELETE',
+      headers: { 'Accept': 'application/json', 'Content-Type': 'application/json' }
+    });
+    if (!response.ok) throw new Error("Falha no DELETE");
+    state.clientesAberto = state.clientesAberto.filter(r=>r.id!==id);
+    renderClientes();
+    renderSidebar();
+  } catch(e) {
+    console.error(e);
+    alert("Erro ao excluir o recibo.");
+    if (btn) btn.textContent = '✕';
+  }
+}
+
+// ─────────────────────────────────────────────────────────
+// RENDER MONTH TABLE
+// ─────────────────────────────────────────────────────────
+function renderMonthTable(filter='', clientFilter='') {
   const m = state.months.find(m=>m.id===state.currentMonth);
   if (!m) return;
 
-  const total = m.entries.reduce((s,e)=>s+(parseFloat(e.valor)||0),0);
+  const total = m.entries.reduce((s,e)=>s+(parseValor(e.valor)),0);
   document.getElementById('month-title-display').textContent = m.label;
   document.getElementById('month-meta-display').textContent = `${m.entries.length} lançamentos`;
   document.getElementById('month-total-display').textContent = formatBRL(total);
 
+  // Populat dropdown de clientes
+  const sel = document.getElementById('month-client-filter');
+  const prev = sel.value;
+  const uniqueClientes = [...new Set(m.entries.map(e=>e.cliente).filter(Boolean))].sort();
+  sel.innerHTML = '<option value="">Todos os clientes</option>' +
+    uniqueClientes.map(c=>`<option value="${c}" ${c===prev?'selected':''}>${c}</option>`).join('');
+
+  // Mostrar/ocultar botão "Excluir Pagos"
+  const pagoCount = m.entries.filter(e=>(e.status||'').toUpperCase()==='PAGO').length;
+  const btnPaid = document.getElementById('btn-delete-paid');
+  if (pagoCount > 0) {
+    btnPaid.style.display = '';
+    btnPaid.textContent = `🗑 Excluir Pagos (${pagoCount})`;
+  } else {
+    btnPaid.style.display = 'none';
+  }
+
   const flt = filter.toLowerCase();
-  const filtered = m.entries.filter(e =>
-    !flt || [e.cliente,e.processo,e.classe,e.parte,e.grerj].some(v=>(v||'').toLowerCase().includes(flt))
-  );
+  const filtered = m.entries.filter(e => {
+    const matchText = !flt || [e.cliente,e.processo,e.classe,e.parte,e.grerj].some(v=>(v||'').toLowerCase().includes(flt));
+    const matchCliente = !clientFilter || e.cliente === clientFilter;
+    return matchText && matchCliente;
+  });
 
   const tbody = document.getElementById('month-tbody');
   const empty = document.getElementById('month-empty');
-  if (m.entries.length === 0) { tbody.innerHTML=''; empty.style.display=''; return; }
-  empty.style.display = 'none';
+  if (m.entries.length===0) { tbody.innerHTML=''; empty.style.display=''; return; }
+  empty.style.display='none';
 
-  tbody.innerHTML = filtered.map((e,i) => `
-    <tr data-id="${e.id}">
+  tbody.innerHTML = filtered.map(e => {
+    const isPago = (e.status||'').toUpperCase()==='PAGO';
+    const obsHtml = e.obs
+      ? `<span class="obs-icon" data-obs="${e.obs.replace(/"/g,'&quot;')}">💬</span>`
+      : '<span style="color:var(--gray-m);font-size:0.75rem">—</span>';
+    const paidBtn = !isPago
+      ? `<button class="row-action-btn row-paid-btn" onclick="markAsPaid('${m.id}',${e.id},event)" title="Marcar como Pago">✓</button>`
+      : '';
+    return `<tr data-id="${e.id}" class="${isPago?'row-pago':''}" onclick="openEditEntry('${m.id}',${e.id})">
       <td class="mono" style="font-size:0.72rem">${e.grerj||'—'}</td>
       <td class="mono" style="font-size:0.78rem">${formatDate(e.date)}</td>
       <td class="center">${tipoBadge(e.tipo)}</td>
       <td><strong>${e.cliente||'—'}</strong></td>
-      <td class="right"><strong>${formatBRL(parseFloat(e.valor)||0)}</strong></td>
+      <td class="right"><strong>${formatBRL(parseValor(e.valor))}</strong></td>
       <td class="mono" style="font-size:0.72rem;color:var(--gray-d)">${e.processo||'—'}</td>
       <td style="font-size:0.8rem">${e.classe||'—'}</td>
       <td class="center">${reimbBadge(e.reimb)}</td>
       <td class="center">${statusBadge(e.status)}</td>
-      <td><button class="row-delete" onclick="deleteEntry('${m.id}',${e.id},event)" title="Excluir">✕</button></td>
-    </tr>
-  `).join('');
+      <td class="center">${obsHtml}</td>
+      <td>
+        <div class="row-actions">
+          <button class="row-action-btn row-edit" onclick="openEditEntry('${m.id}',${e.id},event)" title="Editar">✏️</button>
+          ${paidBtn}
+          <button class="row-action-btn row-delete-btn" onclick="deleteEntry('${m.id}',${e.id},event)" title="Excluir">✕</button>
+        </div>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+// ─────────────────────────────────────────────────────────
+// EXPORT PDF
+// ─────────────────────────────────────────────────────────
+function exportMonthPDF() {
+  const m = state.months.find(x=>x.id===state.currentMonth);
+  if (!m) return;
+
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+  const total = m.entries.reduce((s,e)=>s+(parseValor(e.valor)),0);
+
+  doc.setFillColor(13, 27, 42);
+  doc.rect(0, 0, 297, 28, 'F');
+  doc.setDrawColor(201, 168, 76);
+  doc.setLineWidth(0.8);
+  doc.line(0, 28, 297, 28);
+
+  doc.setTextColor(201, 168, 76);
+  doc.setFontSize(18);
+  doc.setFont('helvetica', 'bold');
+  doc.text('EAZ — Custas Processuais', 14, 12);
+
+  doc.setFontSize(9);
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(180, 150, 80);
+  doc.text('Escritório de Advocacia Zveiter', 14, 19);
+  doc.text(`Mês: ${m.label}`, 14, 25);
+
+  doc.setTextColor(255, 255, 255);
+  doc.setFontSize(10);
+  doc.setFont('helvetica', 'bold');
+  doc.text(`Total: ${formatBRL(total)}`, 230, 17, {align:'right'});
+  doc.setFontSize(8);
+  doc.setFont('helvetica', 'normal');
+  doc.text(`${m.entries.length} lançamentos`, 230, 23, {align:'right'});
+
+  const rows = m.entries.map(e => [
+    e.grerj || '—', formatDate(e.date), e.tipo || '—', e.cliente || '—',
+    formatBRL(parseValor(e.valor)), e.processo || '—', e.classe || '—',
+    e.reimb || '—', e.status || '—', e.obs ? e.obs.substring(0,40) : '—',
+  ]);
+
+  doc.autoTable({
+    startY: 33,
+    head: [['GRERJ / Doc.', 'Data', 'Tipo', 'Cliente', 'Valor', 'Processo', 'Classe', 'Reimb.', 'Status', 'Obs.']],
+    body: rows,
+    styles: { font: 'helvetica', fontSize: 7, cellPadding: 2, textColor: [13, 27, 42] },
+    headStyles: {
+      fillColor: [13, 27, 42], textColor: [201, 168, 76], fontStyle: 'bold',
+      fontSize: 7.5, lineColor: [201, 168, 76], lineWidth: { bottom: 0.5 },
+    },
+    alternateRowStyles: { fillColor: [244, 243, 239] },
+    columnStyles: {
+      0:{cellWidth:32}, 1:{cellWidth:18}, 2:{cellWidth:18}, 3:{cellWidth:32},
+      4:{cellWidth:22,halign:'right'}, 5:{cellWidth:48}, 6:{cellWidth:30},
+      7:{cellWidth:15,halign:'center'}, 8:{cellWidth:18,halign:'center'}, 9:{cellWidth:40},
+    },
+    foot: [[
+      {content:'TOTAL GERAL',colSpan:4,styles:{fillColor:[13,27,42],textColor:[201,168,76],fontStyle:'bold'}},
+      {content:formatBRL(total),styles:{fillColor:[13,27,42],textColor:[201,168,76],fontStyle:'bold',halign:'right'}},
+      {content:'',colSpan:5,styles:{fillColor:[13,27,42]}},
+    ]],
+    footStyles: { fillColor:[13,27,42], textColor:[201,168,76] },
+    margin: { left:14, right:14 },
+    didDrawPage: (data) => {
+      const pageCount = doc.internal.getNumberOfPages();
+      doc.setFontSize(7);
+      doc.setTextColor(120, 120, 110);
+      doc.text(
+        `Gerado em ${new Date().toLocaleDateString('pt-BR')} · Página ${data.pageNumber}/${pageCount}`,
+        148, doc.internal.pageSize.height - 8, { align:'center' }
+      );
+    }
+  });
+
+  doc.save(`EAZ_Custas_${m.id}.pdf`);
+}
+
+// ─────────────────────────────────────────────────────────
+// EXPORT CSV (abre no Excel, sem dependência de CDN)
+// ─────────────────────────────────────────────────────────
+function exportMonthExcel() {
+  const m = state.months.find(x=>x.id===state.currentMonth);
+  if (!m) return;
+
+  const header = ['Nº GRERJ / Doc.','Data','Tipo','Cliente','Valor (R$)','Processo','Tipo de Custas','Parte Contrária','Reembolsável','Status','Observações'];
+  const rows = m.entries.map(e => [
+    e.grerj, formatDate(e.date), e.tipo, e.cliente,
+    (parseValor(e.valor)).toFixed(2).replace('.',','),
+    e.processo, e.classe, e.parte, e.reimb, e.status||'EM ABERTO', e.obs
+  ]);
+
+  // Escapar campos com vírgula ou aspas
+  const escape = v => {
+    const s = (v==null?'':String(v));
+    return (s.includes(';')||s.includes('"')||s.includes('\n')) ? `"${s.replace(/"/g,'""')}"` : s;
+  };
+
+  // BOM UTF-8 para o Excel reconhecer acentos
+  const BOM = '\uFEFF';
+  const csv = BOM + [header, ...rows].map(r => r.map(escape).join(';')).join('\r\n');
+
+  const blob = new Blob([csv], {type:'text/csv;charset=utf-8;'});
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href     = url;
+  a.download = `EAZ_Custas_${m.id}.csv`;
+  document.body.appendChild(a);
+  a.click();
+  setTimeout(()=>{ URL.revokeObjectURL(url); a.remove(); }, 1000);
 }
 
 // ─────────────────────────────────────────────────────────
@@ -1018,11 +2160,16 @@ function showPage(page) {
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
   document.querySelectorAll('.month-tab').forEach(t=>t.classList.remove('active'));
 
-  if (page === 'resumo') {
+  if (page==='resumo') {
     document.getElementById('page-resumo').classList.add('active');
     document.getElementById('sidebar-resumo').classList.add('active');
-    state.currentMonth = null;
+    state.currentMonth=null;
     renderResumo();
+  } else if (page==='clientes') {
+    document.getElementById('page-clientes').classList.add('active');
+    document.getElementById('sidebar-clientes').classList.add('active');
+    state.currentMonth=null;
+    renderClientes();
   }
   renderSidebar();
 }
@@ -1037,66 +2184,102 @@ function showMonth(id) {
 }
 
 function filterTable() {
-  renderMonthTable(document.getElementById('month-filter').value);
+  renderMonthTable(
+    document.getElementById('month-filter').value,
+    document.getElementById('month-client-filter').value
+  );
 }
 
 // ─────────────────────────────────────────────────────────
-// MODALS & CRUD
+// MODALS
 // ─────────────────────────────────────────────────────────
 function openModal(id) { document.getElementById(id).classList.add('open'); }
 function closeModal(id) { document.getElementById(id).classList.remove('open'); }
 
 document.querySelectorAll('.modal-overlay').forEach(m => {
-  m.addEventListener('click', e => { if (e.target === m) m.classList.remove('open'); });
+  m.addEventListener('click', e => { if(e.target===m) {
+    if (m.id === 'modal-addentry') closeEntryModal();
+    else m.classList.remove('open');
+  }});
 });
+
+function closeEntryModal() {
+  closeModal('modal-addentry');
+  state.editingId = null;
+  state.editingMonthId = null;
+  document.getElementById('entry-month').disabled = false;
+  document.getElementById('edit-mode-bar').style.display = 'none';
+}
 
 function openAddMonth() { openModal('modal-addmonth'); }
 
-async function confirmAddMonth() {
-  const name = document.getElementById('new-month-name').value;
-  const year = document.getElementById('new-month-year').value;
-  if (!name) { alert('Selecione o mês.'); return; }
-
-  const shortYear = year.slice(2);
-  const id = `${name}-${shortYear}`;
-  if (state.months.find(m=>m.id===id)) { alert('Este mês já existe.'); return; }
-
-  const btn = document.querySelector('#modal-addmonth .btn-gold');
-  const txtOriginal = btn.textContent;
-  btn.textContent = 'Criando na nuvem...';
-  btn.disabled = true;
-
-  try {
-    const response = await fetch(API_URL, {
-      method: 'POST',
-      headers: { 'Accept': 'application/json', 'Content-Type': 'application/json' },
-      body: JSON.stringify({ data: [{ id: Date.now(), mes_id: id }] })
-    });
-    if (!response.ok) throw new Error("Erro no POST");
-    
-    state.months.push({ id, label: `${name} / ${year}`, entries: [] });
-    closeModal('modal-addmonth');
-    renderSidebar();
-    renderResumo();
-    showMonth(id);
-  } catch (e) {
-    console.error(e);
-    alert('A API rejeitou a criação. Verifique os cabeçalhos da planilha.');
-  } finally {
-    btn.textContent = txtOriginal;
-    btn.disabled = false;
-  }
-}
-
+// ─────────────────────────────────────────────────────────
+// ABRIR MODAL: NOVO LANÇAMENTO
+// ─────────────────────────────────────────────────────────
 function openAddEntry() {
+  state.editingId = null;
+  state.editingMonthId = null;
+  document.getElementById('modal-entry-title').textContent = 'Novo Lançamento';
+  document.getElementById('modal-entry-save-btn').textContent = 'Salvar Lançamento';
+  document.getElementById('edit-mode-bar').style.display = 'none';
+
   const sel = document.getElementById('entry-month');
   sel.innerHTML = state.months.map(m=>`<option value="${m.id}" ${m.id===state.currentMonth?'selected':''}>${m.label}</option>`).join('');
+  sel.disabled = false;
 
-  ['entry-grerj','entry-date','entry-cliente','entry-valor','entry-processo','entry-classe','entry-parte'].forEach(id=>{ document.getElementById(id).value=''; });
+  ['entry-grerj','entry-date','entry-cliente','entry-valor','entry-processo','entry-classe','entry-parte','entry-obs'].forEach(id=>{ document.getElementById(id).value=''; });
   ['entry-tipo','entry-reimb','entry-status'].forEach(id=>{ document.getElementById(id).value=''; });
-
   document.getElementById('entry-date').value = new Date().toISOString().slice(0,10);
+
   openModal('modal-addentry');
+}
+
+// ─────────────────────────────────────────────────────────
+// ABRIR MODAL: EDITAR LANÇAMENTO
+// ─────────────────────────────────────────────────────────
+function openEditEntry(monthId, entryId, evt) {
+  if (evt) evt.stopPropagation();
+
+  const m = state.months.find(m=>m.id===monthId);
+  if (!m) return;
+  const e = m.entries.find(e=>e.id===entryId);
+  if (!e) return;
+
+  state.editingId = entryId;
+  state.editingMonthId = monthId;
+
+  document.getElementById('modal-entry-title').textContent = 'Editar Lançamento';
+  document.getElementById('modal-entry-save-btn').textContent = 'Atualizar Lançamento';
+  document.getElementById('edit-mode-bar').style.display = 'flex';
+
+  const sel = document.getElementById('entry-month');
+  sel.innerHTML = state.months.map(mx=>`<option value="${mx.id}" ${mx.id===monthId?'selected':''}>${mx.label}</option>`).join('');
+  sel.disabled = true;
+
+  document.getElementById('entry-grerj').value    = e.grerj || '';
+  document.getElementById('entry-date').value      = e.date || '';
+  document.getElementById('entry-tipo').value      = e.tipo || '';
+  document.getElementById('entry-cliente').value   = e.cliente || '';
+  document.getElementById('entry-valor').value     = e.valor || '';
+  document.getElementById('entry-processo').value  = e.processo || '';
+  document.getElementById('entry-classe').value    = e.classe || '';
+  document.getElementById('entry-parte').value     = e.parte || '';
+  document.getElementById('entry-reimb').value     = e.reimb || '';
+  document.getElementById('entry-status').value    = e.status || '';
+  document.getElementById('entry-obs').value       = e.obs || '';
+
+  openModal('modal-addentry');
+}
+
+// ─────────────────────────────────────────────────────────
+// SALVAR (NOVO OU EDITAR)
+// ─────────────────────────────────────────────────────────
+async function confirmSaveEntry() {
+  if (state.editingId !== null) {
+    await confirmEditEntry();
+  } else {
+    await confirmAddEntry();
+  }
 }
 
 async function confirmAddEntry() {
@@ -1108,24 +2291,25 @@ async function confirmAddEntry() {
   const m = state.months.find(m=>m.id===monthId);
   if (!m) return;
 
-  const btn = document.querySelector('#modal-addentry .btn-gold');
+  const btn = document.getElementById('modal-entry-save-btn');
   const txtOriginal = btn.textContent;
-  btn.textContent = 'Enviando para o Google Sheets...';
+  btn.textContent = 'Enviando para o Google Sheets…';
   btn.disabled = true;
 
-  const newId = Date.now(); // Usando timestamp como ID único seguro
+  const newId = Date.now();
   const newEntry = {
     id: newId,
-    grerj: document.getElementById('entry-grerj').value.trim(),
-    date: document.getElementById('entry-date').value,
-    tipo: document.getElementById('entry-tipo').value,
-    cliente: document.getElementById('entry-cliente').value.trim(),
+    grerj:    document.getElementById('entry-grerj').value.trim(),
+    date:     document.getElementById('entry-date').value,
+    tipo:     document.getElementById('entry-tipo').value,
+    cliente:  document.getElementById('entry-cliente').value.trim(),
     valor,
     processo: document.getElementById('entry-processo').value.trim(),
-    classe: document.getElementById('entry-classe').value.trim(),
-    parte: document.getElementById('entry-parte').value.trim(),
-    reimb: document.getElementById('entry-reimb').value,
-    status: document.getElementById('entry-status').value,
+    classe:   document.getElementById('entry-classe').value.trim(),
+    parte:    document.getElementById('entry-parte').value.trim(),
+    reimb:    document.getElementById('entry-reimb').value,
+    status:   document.getElementById('entry-status').value,
+    obs:      document.getElementById('entry-obs').value.trim(),
   };
 
   try {
@@ -1136,19 +2320,15 @@ async function confirmAddEntry() {
         id: newEntry.id, mes_id: monthId, grerj: newEntry.grerj, data: newEntry.date,
         tipo: newEntry.tipo, cliente: newEntry.cliente, valor: newEntry.valor,
         processo: newEntry.processo, classe: newEntry.classe, parte: newEntry.parte,
-        reembolsavel: newEntry.reimb, status: newEntry.status
+        reembolsavel: newEntry.reimb, status: newEntry.status, obs: newEntry.obs
       }]})
     });
-
     if (!response.ok) throw new Error("A nuvem negou a gravação.");
-
-    // Atualiza a tela APENAS se tiver ido pra nuvem com sucesso
     m.entries.push(newEntry);
-    closeModal('modal-addentry');
+    closeEntryModal();
     renderSidebar();
-    if (state.currentMonth === monthId) { renderMonthTable(); } else { showMonth(monthId); }
+    if (state.currentMonth===monthId) { renderMonthTable(); } else { showMonth(monthId); }
     renderResumo();
-
   } catch(e) {
     console.error(e);
     alert("Erro crítico: Os dados não foram salvos na planilha. Inspecione o erro no console (F12).");
@@ -1158,13 +2338,154 @@ async function confirmAddEntry() {
   }
 }
 
+async function confirmEditEntry() {
+  const monthId = state.editingMonthId;
+  const entryId = state.editingId;
+  const valor = parseFloat(document.getElementById('entry-valor').value);
+  if (isNaN(valor) || valor <= 0) { alert('Informe um valor válido.'); return; }
+
+  const m = state.months.find(m=>m.id===monthId);
+  if (!m) return;
+
+  const btn = document.getElementById('modal-entry-save-btn');
+  const txtOriginal = btn.textContent;
+  btn.textContent = 'Atualizando na planilha…';
+  btn.disabled = true;
+
+  const updatedData = {
+    grerj:        document.getElementById('entry-grerj').value.trim(),
+    data:         document.getElementById('entry-date').value,
+    tipo:         document.getElementById('entry-tipo').value,
+    cliente:      document.getElementById('entry-cliente').value.trim(),
+    valor,
+    processo:     document.getElementById('entry-processo').value.trim(),
+    classe:       document.getElementById('entry-classe').value.trim(),
+    parte:        document.getElementById('entry-parte').value.trim(),
+    reembolsavel: document.getElementById('entry-reimb').value,
+    status:       document.getElementById('entry-status').value,
+    obs:          document.getElementById('entry-obs').value.trim(),
+  };
+
+  try {
+    const response = await fetch(`${API_URL}/id/${entryId}`, {
+      method: 'PATCH',
+      headers: { 'Accept': 'application/json', 'Content-Type': 'application/json' },
+      body: JSON.stringify({ data: updatedData })
+    });
+    if (!response.ok) throw new Error("Falha no PATCH");
+
+    // Atualizar estado local
+    const entry = m.entries.find(e=>e.id===entryId);
+    if (entry) {
+      entry.grerj    = updatedData.grerj;
+      entry.date     = updatedData.data;
+      entry.tipo     = updatedData.tipo;
+      entry.cliente  = updatedData.cliente;
+      entry.valor    = valor;
+      entry.processo = updatedData.processo;
+      entry.classe   = updatedData.classe;
+      entry.parte    = updatedData.parte;
+      entry.reimb    = updatedData.reembolsavel;
+      entry.status   = updatedData.status;
+      entry.obs      = updatedData.obs;
+    }
+
+    closeEntryModal();
+    renderMonthTable();
+    renderSidebar();
+    renderResumo();
+  } catch(e) {
+    console.error(e);
+    alert("Erro ao atualizar na planilha. Verifique o console (F12).");
+  } finally {
+    btn.textContent = txtOriginal;
+    btn.disabled = false;
+  }
+}
+
+// ─────────────────────────────────────────────────────────
+// MARCAR COMO PAGO (PATCH rápido por linha)
+// ─────────────────────────────────────────────────────────
+async function markAsPaid(monthId, entryId, evt) {
+  evt.stopPropagation();
+  const m = state.months.find(m=>m.id===monthId);
+  if (!m) return;
+  const entry = m.entries.find(e=>e.id===entryId);
+  if (!entry || (entry.status||'').toUpperCase()==='PAGO') return;
+
+  if (!confirm(`Marcar como PAGO?\n\nCliente: ${entry.cliente||'—'}\nValor: ${formatBRL(entry.valor)}`)) return;
+
+  const btn = evt.target;
+  const originalText = btn.textContent;
+  btn.textContent = '⏳';
+  btn.disabled = true;
+
+  try {
+    const response = await fetch(`${API_URL}/id/${entryId}`, {
+      method: 'PATCH',
+      headers: { 'Accept': 'application/json', 'Content-Type': 'application/json' },
+      body: JSON.stringify({ data: { status: 'PAGO' } })
+    });
+    if (!response.ok) throw new Error("Falha no PATCH");
+    entry.status = 'PAGO';
+    renderMonthTable();
+    renderSidebar();
+  } catch(e) {
+    console.error(e);
+    alert("Erro ao marcar como pago.");
+    btn.textContent = originalText;
+    btn.disabled = false;
+  }
+}
+
+// ─────────────────────────────────────────────────────────
+// EXCLUIR TODOS OS PAGOS DO MÊS
+// ─────────────────────────────────────────────────────────
+async function deletePaidEntries() {
+  const m = state.months.find(m=>m.id===state.currentMonth);
+  if (!m) return;
+  const paid = m.entries.filter(e=>(e.status||'').toUpperCase()==='PAGO');
+  if (paid.length === 0) { alert('Nenhum lançamento PAGO neste mês.'); return; }
+
+  if (!confirm(`Excluir ${paid.length} lançamento${paid.length>1?'s':''}  com status PAGO da planilha do Google?\n\nEssa ação não pode ser desfeita.`)) return;
+
+  const btn = document.getElementById('btn-delete-paid');
+  btn.textContent = 'Excluindo…';
+  btn.disabled = true;
+
+  let errors = 0;
+  const toDelete = [...paid];
+
+  for (const entry of toDelete) {
+    try {
+      const response = await fetch(`${API_URL}/id/${entry.id}`, {
+        method: 'DELETE',
+        headers: { 'Accept': 'application/json', 'Content-Type': 'application/json' }
+      });
+      if (!response.ok) throw new Error();
+      m.entries = m.entries.filter(e=>e.id!==entry.id);
+    } catch {
+      errors++;
+    }
+  }
+
+  if (errors > 0) alert(`${errors} lançamento(s) não puderam ser excluídos. Tente novamente.`);
+
+  renderMonthTable();
+  renderSidebar();
+  renderResumo();
+}
+
+// ─────────────────────────────────────────────────────────
+// EXCLUIR LANÇAMENTO INDIVIDUAL
+// ─────────────────────────────────────────────────────────
 async function deleteEntry(monthId, entryId, evt) {
   evt.stopPropagation();
   if (!confirm('Isso vai apagar da planilha do Google. Confirmar?')) return;
   const m = state.months.find(m=>m.id===monthId);
   if (!m) return;
-
   const rowBtn = evt.target;
+  const originalText = rowBtn.textContent;
   rowBtn.textContent = '⏳';
 
   try {
@@ -1173,7 +2494,6 @@ async function deleteEntry(monthId, entryId, evt) {
       headers: { 'Accept': 'application/json', 'Content-Type': 'application/json' }
     });
     if (!response.ok) throw new Error("Falha no DELETE");
-
     m.entries = m.entries.filter(e=>e.id!==entryId);
     renderMonthTable();
     renderSidebar();
@@ -1181,27 +2501,65 @@ async function deleteEntry(monthId, entryId, evt) {
   } catch(e) {
     console.error(e);
     alert("Erro ao excluir no banco de dados.");
-    rowBtn.textContent = '✕';
+    rowBtn.textContent = originalText;
   }
 }
 
+// ─────────────────────────────────────────────────────────
+// CRIAR MÊS
+// ─────────────────────────────────────────────────────────
+async function confirmAddMonth() {
+  const name = document.getElementById('new-month-name').value;
+  const year = document.getElementById('new-month-year').value;
+  if (!name) { alert('Selecione o mês.'); return; }
+
+  const shortYear = year.slice(2);
+  const id = `${name}-${shortYear}`;
+  if (state.months.find(m=>m.id===id)) { alert('Este mês já existe.'); return; }
+
+  const btn = document.querySelector('#modal-addmonth .btn-gold');
+  const txtOriginal = btn.textContent;
+  btn.textContent = 'Criando na nuvem…';
+  btn.disabled = true;
+
+  try {
+    const response = await fetch(API_URL, {
+      method: 'POST',
+      headers: { 'Accept': 'application/json', 'Content-Type': 'application/json' },
+      body: JSON.stringify({ data: [{ id: Date.now(), mes_id: id }] })
+    });
+    if (!response.ok) throw new Error("Erro no POST");
+    state.months.push({ id, label: `${name} / ${year}`, entries: [] });
+    closeModal('modal-addmonth');
+    renderSidebar();
+    renderResumo();
+    showMonth(id);
+  } catch(e) {
+    console.error(e);
+    alert('A API rejeitou a criação. Verifique os cabeçalhos da planilha.');
+  } finally {
+    btn.textContent = txtOriginal;
+    btn.disabled = false;
+  }
+}
+
+// ─────────────────────────────────────────────────────────
+// EXCLUIR MÊS INTEIRO
+// ─────────────────────────────────────────────────────────
 async function openDeleteMonth() {
   if (!state.currentMonth) return;
   const m = state.months.find(m=>m.id===state.currentMonth);
   if (!confirm(`Excluir o mês "${m.label}" e todos os seus ${m.entries.length} lançamentos do Banco de Dados?`)) return;
-  
   const monthId = state.currentMonth;
   const btn = document.querySelector('.month-toolbar .btn-outline');
   const txtOriginal = btn.textContent;
-  btn.textContent = 'Deletando na nuvem...';
-
+  btn.textContent = 'Deletando na nuvem…';
   try {
     const response = await fetch(`${API_URL}/mes_id/${monthId}`, {
       method: 'DELETE',
       headers: { 'Accept': 'application/json', 'Content-Type': 'application/json' }
     });
     if (!response.ok) throw new Error("Falha no DELETE do mês");
-
     state.months = state.months.filter(month=>month.id!==monthId);
     state.currentMonth = null;
     renderSidebar();
