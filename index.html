@@ -918,7 +918,7 @@
     </div>
     <div id="sidebar-clientes" class="month-tab" onclick="showPage('clientes')">
       <span class="month-tab-name">Em Aberto</span>
-      <span class="month-tab-total" style="color:rgba(155,44,44,0.7)">R$ 72.396</span>
+      <span class="month-tab-total" id="sidebar-aberto-total" style="color:rgba(155,44,44,0.7)"></span>
     </div>
 
     <div class="sidebar-label" style="margin-top:1rem">Meses</div>
@@ -1450,8 +1450,10 @@ function statusBadge(s) {
 // ─────────────────────────────────────────────────────────
 function renderSidebar() {
   // Atualiza total do "Em Aberto" na sidebar
-  const totalAberto = state.clientesAberto.reduce((s,r) => s + r.valor, 0);
-  const sideAberto = document.getElementById('sidebar-clientes').querySelector('.month-tab-total');
+  const totalAberto = state.clientesAberto
+    .filter(r => r.status !== 'PAGO')
+    .reduce((s,r) => s + r.valor, 0);
+  const sideAberto = document.getElementById('sidebar-aberto-total');
   if (sideAberto) sideAberto.textContent = totalAberto > 0 ? formatBRL(totalAberto) : '';
 
   const el = document.getElementById('month-tabs');
@@ -1959,15 +1961,36 @@ function renderMonthTable(filter='', clientFilter='') {
 }
 
 // ─────────────────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────
+// HELPER: entradas respeitando filtros ativos
+// ─────────────────────────────────────────────────────────
+function getFilteredEntries() {
+  const m = state.months.find(x=>x.id===state.currentMonth);
+  if (!m) return [];
+  const flt = (document.getElementById('month-filter')?.value || '').toLowerCase();
+  const clientFilter = document.getElementById('month-client-filter')?.value || '';
+  return m.entries.filter(e => {
+    const matchText = !flt || [e.cliente,e.processo,e.classe,e.parte,e.grerj].some(v=>(v||'').toLowerCase().includes(flt));
+    const matchCliente = !clientFilter || e.cliente === clientFilter;
+    return matchText && matchCliente;
+  });
+}
+
+// ─────────────────────────────────────────────────────────
 // EXPORT PDF
 // ─────────────────────────────────────────────────────────
 function exportMonthPDF() {
   const m = state.months.find(x=>x.id===state.currentMonth);
   if (!m) return;
 
+  const entries = getFilteredEntries();
+  const clientFilter = document.getElementById('month-client-filter')?.value || '';
+  const textFilter   = document.getElementById('month-filter')?.value || '';
+  const isFiltered   = !!(clientFilter || textFilter);
+
   const { jsPDF } = window.jspdf;
   const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
-  const total = m.entries.reduce((s,e)=>s+(parseValor(e.valor)),0);
+  const total = entries.reduce((s,e)=>s+(parseValor(e.valor)),0);
 
   doc.setFillColor(13, 27, 42);
   doc.rect(0, 0, 297, 28, 'F');
@@ -1992,9 +2015,10 @@ function exportMonthPDF() {
   doc.text(`Total: ${formatBRL(total)}`, 230, 17, {align:'right'});
   doc.setFontSize(8);
   doc.setFont('helvetica', 'normal');
-  doc.text(`${m.entries.length} lançamentos`, 230, 23, {align:'right'});
+  const filterLabel = clientFilter ? `Cliente: ${clientFilter}` : textFilter ? `Filtro: "${textFilter}"` : '';
+  doc.text(`${entries.length} lançamento${entries.length!==1?'s':''}${filterLabel?' · '+filterLabel:''}`, 230, 23, {align:'right'});
 
-  const rows = m.entries.map(e => [
+  const rows = entries.map(e => [
     e.grerj || '—', formatDate(e.date), e.tipo || '—', e.cliente || '—',
     formatBRL(parseValor(e.valor)), e.processo || '—', e.classe || '—',
     e.reimb || '—', e.status || '—', e.obs ? e.obs.substring(0,40) : '—',
@@ -2016,7 +2040,7 @@ function exportMonthPDF() {
       7:{cellWidth:15,halign:'center'}, 8:{cellWidth:18,halign:'center'}, 9:{cellWidth:40},
     },
     foot: [[
-      {content:'TOTAL GERAL',colSpan:4,styles:{fillColor:[13,27,42],textColor:[201,168,76],fontStyle:'bold'}},
+      {content: isFiltered ? `TOTAL FILTRADO${clientFilter?' ('+clientFilter+')':''}` : 'TOTAL GERAL', colSpan:4, styles:{fillColor:[13,27,42],textColor:[201,168,76],fontStyle:'bold'}},
       {content:formatBRL(total),styles:{fillColor:[13,27,42],textColor:[201,168,76],fontStyle:'bold',halign:'right'}},
       {content:'',colSpan:5,styles:{fillColor:[13,27,42]}},
     ]],
@@ -2033,7 +2057,8 @@ function exportMonthPDF() {
     }
   });
 
-  doc.save(`EAZ_Custas_${m.id}.pdf`);
+  const suffix = clientFilter ? `_${clientFilter.replace(/[^a-zA-Z0-9]/g,'_')}` : '';
+  doc.save(`EAZ_Custas_${m.id}${suffix}.pdf`);
 }
 
 // ─────────────────────────────────────────────────────────
@@ -2043,8 +2068,11 @@ function exportMonthExcel() {
   const m = state.months.find(x=>x.id===state.currentMonth);
   if (!m) return;
 
+  const entries = getFilteredEntries();
+  const clientFilter = document.getElementById('month-client-filter')?.value || '';
+
   const header = ['Nº GRERJ / Doc.','Data','Tipo','Cliente','Valor (R$)','Processo','Tipo de Custas','Parte Contrária','Reembolsável','Status','Observações'];
-  const rows = m.entries.map(e => [
+  const rows = entries.map(e => [
     e.grerj, formatDate(e.date), e.tipo, e.cliente,
     (parseValor(e.valor)).toFixed(2).replace('.',','),
     e.processo, e.classe, e.parte, e.reimb, e.status||'EM ABERTO', e.obs
@@ -2064,7 +2092,8 @@ function exportMonthExcel() {
   const url  = URL.createObjectURL(blob);
   const a    = document.createElement('a');
   a.href     = url;
-  a.download = `EAZ_Custas_${m.id}.csv`;
+  const csvSuffix = clientFilter ? `_${clientFilter.replace(/[^a-zA-Z0-9]/g,'_')}` : '';
+  a.download = `EAZ_Custas_${m.id}${csvSuffix}.csv`;
   document.body.appendChild(a);
   a.click();
   setTimeout(()=>{ URL.revokeObjectURL(url); a.remove(); }, 1000);
