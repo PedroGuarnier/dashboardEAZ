@@ -732,6 +732,31 @@
     color: var(--green);
     border: 1px solid rgba(46,125,82,0.2);
   }
+  /* ─── RECIBO: ENTRY SELECTOR ───────────────────────── */
+  .recibo-entry-item {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.6rem 0.9rem;
+    border-bottom: 1px solid var(--gray-l);
+    cursor: pointer;
+    transition: background 0.12s;
+  }
+  .recibo-entry-item:hover { background: var(--gold-pale); }
+  .recibo-entry-item.selected { background: #EBF5F0; }
+  .recibo-entry-item input[type=checkbox] { accent-color: var(--green); width:15px;height:15px;cursor:pointer;flex-shrink:0; }
+  .recibo-entry-info { flex: 1; min-width: 0; }
+  .recibo-entry-cliente { font-weight: 600; font-size: 0.82rem; color: var(--navy); white-space:nowrap;overflow:hidden;text-overflow:ellipsis; }
+  .recibo-entry-meta { font-size: 0.7rem; color: var(--gray-d); font-family: var(--font-mono); margin-top: 0.1rem; }
+  .recibo-entry-valor { font-family: var(--font-mono); font-size: 0.85rem; font-weight: 600; color: var(--navy); flex-shrink: 0; }
+  .recibo-selected-chip {
+    display: inline-flex; align-items: center; gap: 0.3rem;
+    background: var(--navy); color: var(--gold-light);
+    font-family: var(--font-mono); font-size: 0.68rem;
+    padding: 0.2rem 0.5rem; border-radius: 20px; margin: 0.15rem;
+  }
+  .recibo-selected-chip button { background:none;border:none;color:rgba(201,168,76,0.6);cursor:pointer;font-size:0.8rem;padding:0;margin-left:0.2rem; }
+  .recibo-selected-chip button:hover { color: var(--gold); }
   /* ─── ABERTO: FILTER TABS ───────────────────────────── */
   .aberto-filter-btn {
     padding: 0.3rem 0.85rem;
@@ -920,6 +945,10 @@
       <span class="month-tab-name">Em Aberto</span>
       <span class="month-tab-total" id="sidebar-aberto-total" style="color:rgba(155,44,44,0.7)"></span>
     </div>
+    <div id="sidebar-recibos" class="month-tab" onclick="showPage('recibos')">
+      <span class="month-tab-name">Recibos</span>
+      <span class="month-tab-total" id="sidebar-recibos-count" style="color:var(--gold-light)"></span>
+    </div>
 
     <div class="sidebar-label" style="margin-top:1rem">Meses</div>
     <div id="month-tabs"></div>
@@ -1065,10 +1094,12 @@
             Lançamentos
             <span class="section-title-sub">clique numa linha para editar</span>
           </div>
-          <div style="display:flex;gap:0.4rem">
+          <div style="display:flex;gap:0.4rem;flex-wrap:wrap;align-items:center">
             <button class="aberto-filter-btn active" id="aberto-filter-todos"   onclick="setAbertoFilter('todos')">Todos</button>
             <button class="aberto-filter-btn"        id="aberto-filter-aberto"  onclick="setAbertoFilter('aberto')">Em Aberto</button>
             <button class="aberto-filter-btn"        id="aberto-filter-pago"    onclick="setAbertoFilter('pago')">Pagos</button>
+            <span style="color:var(--gray-m);font-size:0.8rem;margin:0 0.15rem">|</span>
+            <div id="aberto-year-filters" style="display:flex;gap:0.4rem;flex-wrap:wrap"></div>
           </div>
         </div>
         <table>
@@ -1095,6 +1126,149 @@
       </div>
     </div><!-- /clientes -->
 
+    <!-- PAGE: RECIBOS -->
+    <div id="page-recibos" class="page">
+      <div class="clientes-header">
+        <div>
+          <div class="resumo-title">Recibos</div>
+          <div class="resumo-sub">Agrupe lançamentos em recibos · vincule ao Em Aberto</div>
+        </div>
+        <div style="display:flex;align-items:flex-end">
+          <button class="btn btn-gold btn-sm" onclick="openCreateRecibo()">+ Criar Recibo</button>
+        </div>
+      </div>
+
+      <div class="clientes-cards">
+        <div class="stat-card">
+          <div class="stat-label">Total Faturado</div>
+          <div class="stat-value" style="font-size:1.3rem" id="rec-stat-faturado">R$ 0,00</div>
+          <div class="stat-sub" id="rec-stat-faturado-count">0 recibos</div>
+        </div>
+        <div class="stat-card" style="border-left:3px solid var(--green)">
+          <div class="stat-label">Total Recebido</div>
+          <div class="stat-value" style="color:var(--green);font-size:1.3rem" id="rec-stat-pago">R$ 0,00</div>
+          <div class="stat-sub" id="rec-stat-pago-count">0 recibos pagos</div>
+        </div>
+        <div class="stat-card" style="border-left:3px solid var(--red)">
+          <div class="stat-label">A Receber</div>
+          <div class="stat-value gold" style="font-size:1.3rem" id="rec-stat-aberto">R$ 0,00</div>
+          <div class="stat-sub" id="rec-stat-aberto-count">0 em aberto</div>
+        </div>
+      </div>
+
+      <div class="clientes-table-wrap" style="margin-top:1.5rem">
+        <table>
+          <thead>
+            <tr>
+              <th>Nº Recibo</th>
+              <th>Cliente</th>
+              <th class="right">Valor</th>
+              <th>Data</th>
+              <th class="center">Lançamentos</th>
+              <th class="center">Status</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="recibos-list-tbody"></tbody>
+        </table>
+        <div id="recibos-empty" class="empty-state" style="display:none">
+          <div class="empty-icon">🧾</div>
+          <div class="empty-title">Nenhum recibo criado ainda</div>
+          <div class="empty-sub">Clique em <strong>+ Criar Recibo</strong> para começar.</div>
+        </div>
+      </div>
+    </div><!-- /recibos -->
+
+    <!-- MODAL: CRIAR RECIBO -->
+    <div class="modal-overlay" id="modal-recibo" style="display:none;align-items:flex-start;padding-top:2rem">
+      <div class="modal" style="max-width:860px;width:95%;max-height:90vh;overflow-y:auto">
+        <div class="modal-header">
+          <span class="modal-title">Criar Recibo</span>
+          <button class="modal-close" onclick="closeModal('modal-recibo')">×</button>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.5rem;padding:1.5rem">
+
+          <!-- Coluna esquerda: dados do recibo -->
+          <div>
+            <div style="font-family:var(--font-mono);font-size:0.72rem;color:var(--gray-d);text-transform:uppercase;letter-spacing:.06em;margin-bottom:1rem">Dados do Recibo</div>
+            <div class="form-row">
+              <label class="form-label">Nº do Recibo</label>
+              <input type="text" id="recibo-num" class="form-input" placeholder="Ex: 7691">
+            </div>
+            <div class="form-row">
+              <label class="form-label">Data</label>
+              <input type="date" id="recibo-data" class="form-input">
+            </div>
+            <div class="form-row">
+              <label class="form-label">Cliente</label>
+              <input type="text" id="recibo-cliente" class="form-input" placeholder="Preenchido automaticamente" readonly style="background:var(--gray-l);color:var(--gray-d)">
+            </div>
+
+            <div style="margin-top:1.5rem;padding:1rem;background:var(--navy);border-radius:var(--radius)">
+              <div style="font-family:var(--font-mono);font-size:0.68rem;color:var(--gold-light);text-transform:uppercase;letter-spacing:.06em">Total do Recibo</div>
+              <div style="font-size:1.8rem;font-family:var(--font-display);color:var(--gold);font-weight:700;margin-top:0.3rem" id="recibo-total-display">R$ 0,00</div>
+              <div style="font-size:0.75rem;color:rgba(255,255,255,0.5);margin-top:0.25rem" id="recibo-count-display">0 lançamentos selecionados</div>
+            </div>
+
+            <div style="margin-top:1rem" id="recibo-selected-summary"></div>
+          </div>
+
+          <!-- Coluna direita: seleção de lançamentos -->
+          <div>
+            <div style="font-family:var(--font-mono);font-size:0.72rem;color:var(--gray-d);text-transform:uppercase;letter-spacing:.06em;margin-bottom:0.75rem">Selecionar Lançamentos</div>
+            <div style="display:flex;gap:0.5rem;margin-bottom:0.75rem">
+              <select id="recibo-mes-select" class="form-input" style="flex:1" onchange="renderReciboEntries()">
+                <option value="">Selecione um mês…</option>
+              </select>
+              <input type="text" id="recibo-entry-filter" class="form-input" style="flex:1" placeholder="Filtrar cliente…" oninput="renderReciboEntries()">
+            </div>
+            <div id="recibo-entries-list" style="max-height:340px;overflow-y:auto;border:1px solid var(--gray-m);border-radius:var(--radius);background:var(--white)">
+              <div style="padding:2rem;text-align:center;color:var(--gray-d);font-size:0.82rem">Selecione um mês acima</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button class="btn" onclick="closeModal('modal-recibo')" style="color:var(--navy);background:transparent;border:1px solid var(--gray-m)">Cancelar</button>
+          <button class="btn btn-gold" onclick="confirmCreateRecibo()">Criar Recibo</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- MODAL: EDITAR RECIBO -->
+    <div class="modal-overlay" id="modal-edit-recibo" style="display:none;align-items:center">
+      <div class="modal" style="max-width:420px;width:95%">
+        <div class="modal-header">
+          <span class="modal-title">Editar Recibo</span>
+          <button class="modal-close" onclick="closeModal('modal-edit-recibo')">×</button>
+        </div>
+        <div style="padding:1.5rem">
+          <input type="hidden" id="edit-recibo-id">
+          <div class="form-row">
+            <label class="form-label">Nº do Recibo</label>
+            <input type="text" id="edit-recibo-num" class="form-input" placeholder="Ex: 7691">
+          </div>
+          <div class="form-row">
+            <label class="form-label">Data</label>
+            <input type="date" id="edit-recibo-data" class="form-input">
+          </div>
+          <div class="form-row">
+            <label class="form-label">Cliente</label>
+            <input type="text" id="edit-recibo-cliente" class="form-input">
+          </div>
+          <div class="form-row">
+            <label class="form-label">Valor (R$)</label>
+            <input type="number" id="edit-recibo-valor" class="form-input" step="0.01" min="0" placeholder="0.00">
+          </div>
+          <div style="font-size:0.75rem;color:var(--gray-d);margin-top:0.5rem">Os lançamentos vinculados não são alterados aqui. Para mudar os lançamentos, exclua e crie um novo recibo.</div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn" onclick="closeModal('modal-edit-recibo')" style="color:var(--navy);background:transparent;border:1px solid var(--gray-m)">Cancelar</button>
+          <button class="btn btn-gold" onclick="confirmEditRecibo()">Salvar</button>
+        </div>
+      </div>
+    </div>
+
     <!-- PAGE: MONTH (dynamic) -->
     <div id="page-month" class="page">
       <div class="month-header">
@@ -1103,7 +1277,7 @@
           <div class="month-meta" id="month-meta-display">—</div>
         </div>
         <div class="month-total-chip">
-          <div class="month-total-label">Total do mês</div>
+          <div class="month-total-label" id="month-total-label">Total do mês</div>
           <div class="month-total-value" id="month-total-display">R$ 0,00</div>
         </div>
       </div>
@@ -1309,11 +1483,14 @@ const API_URL = 'https://sheetdb.io/api/v1/2udn9s4iopfks';
 let state = {
   months: [],
   currentMonth: null,
-  editingId: null,       // null = novo lançamento | number = editando
-  editingMonthId: null,  // mes_id do lançamento sendo editado
-  clientesAberto: [],    // carregado do SheetDB (aba Em_Aberto)
-  editingAbertoId: null, // id do recibo sendo editado
-  abertoFilter: 'todos', // 'todos' | 'aberto' | 'pago'
+  editingId: null,
+  editingMonthId: null,
+  clientesAberto: [],
+  editingAbertoId: null,
+  abertoFilter: 'todos',
+  abertoYears: new Set(),   // vazio = todos os anos
+  // Recibos
+  reciboSelectedIds: new Set(), // IDs de entradas selecionadas no modal
 };
 
 // URL da aba Em_Aberto (mesmo SheetDB, sheet diferente)
@@ -1376,6 +1553,7 @@ async function loadState() {
           data: r.data || '',
           valor: parseValor(r.valor),
           status: (r.status || '').toUpperCase(),
+          entries: r.entries || '', // IDs dos lançamentos vinculados (separados por vírgula)
         };
       }).filter(r => r.cliente && r.cliente.trim() !== '');
     } else {
@@ -1427,6 +1605,16 @@ function formatDate(d) {
   const [y,m,day] = d.split('-');
   if(!day) return d;
   return `${day}/${m}/${y}`;
+}
+// Converte notação científica (ex: 5.39E+17) de volta para string legível
+function safeStr(v) {
+  if (v === null || v === undefined || v === '') return '—';
+  const s = String(v);
+  if (/[eE][+\-]\d+/.test(s)) {
+    const n = Number(s);
+    if (!isNaN(n)) return n.toFixed(0);
+  }
+  return s || '—';
 }
 function tipoBadge(tipo) {
   if (!tipo) return '<span class="badge badge-gray">—</span>';
@@ -1684,10 +1872,29 @@ function renderClientes() {
     }).join('');
   }
 
-  // Tabela geral de recibos — filtrar por estado
+  // Botões de filtro por ano — gerar dinamicamente
+  const getYear = d => {
+    if (!d) return null;
+    if (d.includes('-')) return d.split('-')[0];
+    if (d.includes('/')) return d.split('/')[2];
+    return null;
+  };
+  const availableYears = [...new Set(recibos.map(r => getYear(r.data)).filter(Boolean))].sort().reverse();
+  const yearContainer = document.getElementById('aberto-year-filters');
+  if (yearContainer) {
+    yearContainer.innerHTML = availableYears.map(y =>
+      `<button class="aberto-filter-btn${state.abertoYears.has(y) ? ' active' : ''}" onclick="setAbertoYear('${y}')">${y}</button>`
+    ).join('');
+  }
+
+  // Tabela geral de recibos — filtrar por estado e ano(s)
   const filtroAtivo = state.abertoFilter || 'todos';
   const recibosVisiveis = [...recibos]
-    .filter(r => filtroAtivo === 'todos' || (filtroAtivo === 'pago' ? r.status === 'PAGO' : r.status !== 'PAGO'))
+    .filter(r => {
+      const matchStatus = filtroAtivo === 'todos' || (filtroAtivo === 'pago' ? r.status === 'PAGO' : r.status !== 'PAGO');
+      const matchYear = state.abertoYears.size === 0 || state.abertoYears.has(getYear(r.data));
+      return matchStatus && matchYear;
+    })
     .sort((a,b) => {
       const da = a.data.includes('-') ? a.data : a.data.split('/').reverse().join('-');
       const db = b.data.includes('-') ? b.data : b.data.split('/').reverse().join('-');
@@ -1820,11 +2027,41 @@ function setAbertoFilter(filtro) {
   renderClientes();
 }
 
+function setAbertoYear(year) {
+  if (state.abertoYears.has(year)) state.abertoYears.delete(year);
+  else state.abertoYears.add(year);
+  renderClientes();
+}
+
+/// Cascade: aplica status a todos os lançamentos vinculados ao recibo
+async function cascadeEntryStatus(r, newStatus) {
+  if (!r.entries) return;
+  const ids = r.entries.split(',').map(s=>s.trim()).filter(Boolean);
+  if (ids.length === 0) return;
+  await Promise.all(ids.map(entryId =>
+    fetch(`${API_URL}/id/${entryId}`, {
+      method: 'PATCH',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ data: { status: newStatus } })
+    })
+  ));
+  // Atualiza state local
+  ids.forEach(entryId => {
+    const numId = parseInt(entryId);
+    for (const m of state.months) {
+      const e = m.entries.find(x=>x.id===numId);
+      if (e) { e.status = newStatus; break; }
+    }
+  });
+}
+
 async function markAbertoAsPaid(id, evt) {
   if (evt) evt.stopPropagation();
   const r = state.clientesAberto.find(r=>r.id===id);
   if (!r || r.status === 'PAGO') return;
-  if (!confirm(`Marcar recibo ${r.recibo} de ${r.cliente} como PAGO?\n\n${formatBRL(r.valor)}`)) return;
+  const hasEntries = r.entries && r.entries.split(',').filter(Boolean).length > 0;
+  const msg = `Marcar recibo ${r.recibo} de ${r.cliente} como PAGO?\n\n${formatBRL(r.valor)}${hasEntries ? `\n\nOs ${r.entries.split(',').filter(Boolean).length} lançamentos vinculados também serão marcados como PAGO.` : ''}`;
+  if (!confirm(msg)) return;
   try {
     const res = await fetch(`${API_URL}/id/${id}?sheet=Em_Aberto`, {
       method: 'PATCH',
@@ -1833,7 +2070,9 @@ async function markAbertoAsPaid(id, evt) {
     });
     if (res.ok) {
       r.status = 'PAGO';
+      await cascadeEntryStatus(r, 'PAGO');
       renderClientes();
+      renderRecibosPage();
     } else {
       alert('Erro ao atualizar. Verifique se a coluna "status" existe na aba Em_Aberto do Google Sheets.');
     }
@@ -1846,7 +2085,7 @@ async function undoAbertoPayment(id, evt) {
   if (evt) evt.stopPropagation();
   const r = state.clientesAberto.find(r=>r.id===id);
   if (!r || r.status !== 'PAGO') return;
-  if (!confirm(`Reabrir recibo ${r.recibo} de ${r.cliente}?\n\nO pagamento será desfeito e o valor voltará ao saldo em aberto.`)) return;
+  if (!confirm(`Reabrir recibo ${r.recibo} de ${r.cliente}?\n\nO pagamento será desfeito e os lançamentos voltarão para FATURADO.`)) return;
   try {
     const res = await fetch(`${API_URL}/id/${id}?sheet=Em_Aberto`, {
       method: 'PATCH',
@@ -1855,7 +2094,9 @@ async function undoAbertoPayment(id, evt) {
     });
     if (res.ok) {
       r.status = '';
+      await cascadeEntryStatus(r, 'FATURADO');
       renderClientes();
+      renderRecibosPage();
     } else {
       alert('Erro ao reabrir recibo.');
     }
@@ -1896,11 +2137,6 @@ function renderMonthTable(filter='', clientFilter='') {
   const m = state.months.find(m=>m.id===state.currentMonth);
   if (!m) return;
 
-  const total = m.entries.reduce((s,e)=>s+(parseValor(e.valor)),0);
-  document.getElementById('month-title-display').textContent = m.label;
-  document.getElementById('month-meta-display').textContent = `${m.entries.length} lançamentos`;
-  document.getElementById('month-total-display').textContent = formatBRL(total);
-
   // Populat dropdown de clientes
   const sel = document.getElementById('month-client-filter');
   const prev = sel.value;
@@ -1925,6 +2161,19 @@ function renderMonthTable(filter='', clientFilter='') {
     return matchText && matchCliente;
   });
 
+  // Total e label — refletem o filtro ativo
+  const isFiltered = !!(flt || clientFilter);
+  const displayEntries = isFiltered ? filtered : m.entries;
+  const total = displayEntries.reduce((s,e)=>s+parseValor(e.valor), 0);
+  const totalLabel = clientFilter ? `Total — ${clientFilter}` : (flt ? 'Total filtrado' : 'Total do mês');
+
+  document.getElementById('month-title-display').textContent = m.label;
+  document.getElementById('month-meta-display').textContent = isFiltered
+    ? `${filtered.length} de ${m.entries.length} lançamentos`
+    : `${m.entries.length} lançamentos`;
+  document.getElementById('month-total-label').textContent = totalLabel.toUpperCase();
+  document.getElementById('month-total-display').textContent = formatBRL(total);
+
   const tbody = document.getElementById('month-tbody');
   const empty = document.getElementById('month-empty');
   if (m.entries.length===0) { tbody.innerHTML=''; empty.style.display=''; return; }
@@ -1939,12 +2188,12 @@ function renderMonthTable(filter='', clientFilter='') {
       ? `<button class="row-action-btn row-paid-btn" onclick="markAsPaid('${m.id}',${e.id},event)" title="Marcar como Pago">✓</button>`
       : '';
     return `<tr data-id="${e.id}" class="${isPago?'row-pago':''}" onclick="openEditEntry('${m.id}',${e.id})">
-      <td class="mono" style="font-size:0.72rem">${e.grerj||'—'}</td>
+      <td class="mono" style="font-size:0.72rem">${safeStr(e.grerj)}</td>
       <td class="mono" style="font-size:0.78rem">${formatDate(e.date)}</td>
       <td class="center">${tipoBadge(e.tipo)}</td>
       <td><strong>${e.cliente||'—'}</strong></td>
       <td class="right"><strong>${formatBRL(parseValor(e.valor))}</strong></td>
-      <td class="mono" style="font-size:0.72rem;color:var(--gray-d)">${e.processo||'—'}</td>
+      <td class="mono" style="font-size:0.72rem;color:var(--gray-d)">${safeStr(e.processo)}</td>
       <td style="font-size:0.8rem">${e.classe||'—'}</td>
       <td class="center">${reimbBadge(e.reimb)}</td>
       <td class="center">${statusBadge(e.status)}</td>
@@ -2116,8 +2365,334 @@ function showPage(page) {
     document.getElementById('sidebar-clientes').classList.add('active');
     state.currentMonth=null;
     renderClientes();
+  } else if (page==='recibos') {
+    document.getElementById('page-recibos').classList.add('active');
+    document.getElementById('sidebar-recibos').classList.add('active');
+    state.currentMonth=null;
+    renderRecibosPage();
   }
   renderSidebar();
+}
+
+// ─────────────────────────────────────────────────────────
+// RECIBOS — renderização da página
+// ─────────────────────────────────────────────────────────
+function renderRecibosPage() {
+  // Todos os itens do Em_Aberto que foram criados como recibo (têm entries)
+  // OU manualmente (sem entries) — mostramos todos
+  const todos  = state.clientesAberto;
+  const aberto = todos.filter(r => r.status !== 'PAGO');
+  const pagos  = todos.filter(r => r.status === 'PAGO');
+  const totalFat   = todos.reduce((s,r)=>s+r.valor,0);
+  const totalPago  = pagos.reduce((s,r)=>s+r.valor,0);
+  const totalAberto= aberto.reduce((s,r)=>s+r.valor,0);
+
+  document.getElementById('rec-stat-faturado').textContent = formatBRL(totalFat);
+  document.getElementById('rec-stat-faturado-count').textContent = `${todos.length} recibo${todos.length!==1?'s':''}`;
+  document.getElementById('rec-stat-pago').textContent = formatBRL(totalPago);
+  document.getElementById('rec-stat-pago-count').textContent = `${pagos.length} pago${pagos.length!==1?'s':''}`;
+  document.getElementById('rec-stat-aberto').textContent = formatBRL(totalAberto);
+  document.getElementById('rec-stat-aberto-count').textContent = `${aberto.length} em aberto`;
+
+  // Atualiza sidebar badge
+  const sideCount = document.getElementById('sidebar-recibos-count');
+  if (sideCount) sideCount.textContent = todos.length > 0 ? todos.length : '';
+
+  const sorted = [...todos].sort((a,b)=>String(b.recibo).localeCompare(String(a.recibo)));
+  const tbody = document.getElementById('recibos-list-tbody');
+  const empty = document.getElementById('recibos-empty');
+
+  if (sorted.length === 0) {
+    tbody.innerHTML = '';
+    empty.style.display = '';
+    return;
+  }
+  empty.style.display = 'none';
+
+  tbody.innerHTML = sorted.map(r => {
+    const isPago = r.status === 'PAGO';
+    const entryIds = r.entries ? r.entries.split(',').filter(Boolean) : [];
+    const linkedCount = entryIds.length;
+    return `<tr>
+      <td class="mono"><strong>${r.recibo || '—'}</strong></td>
+      <td><strong>${r.cliente || '—'}</strong></td>
+      <td class="right"><strong style="${isPago?'text-decoration:line-through;color:var(--gray-d)':''}">${formatBRL(r.valor)}</strong></td>
+      <td class="mono" style="font-size:0.75rem">${r.data || '—'}</td>
+      <td class="center"><span style="font-family:var(--font-mono);font-size:0.78rem;color:var(--navy)">${linkedCount > 0 ? `${linkedCount} lançamento${linkedCount!==1?'s':''}` : '—'}</span></td>
+      <td class="center"><span class="${isPago?'badge-pago':'badge-aberto'}">${isPago?'PAGO':'EM ABERTO'}</span></td>
+      <td>
+        <div class="aberto-actions">
+          ${!isPago
+            ? `<button class="row-action-btn row-paid-btn" onclick="markAbertoAsPaid(${r.id},event)" title="Marcar como Pago">✓ Pago</button>`
+            : `<button class="row-undo-btn" onclick="undoAbertoPayment(${r.id},event)" title="Reabrir">↩ Reabrir</button>`}
+          <button class="row-edit-btn" onclick="openEditRecibo(${r.id},event)" title="Editar recibo" style="background:var(--navy-light);color:var(--white);border:none;padding:0.25rem 0.6rem;border-radius:3px;cursor:pointer;font-size:0.78rem;margin-left:0.25rem">✎</button>
+          <button class="row-delete-btn" onclick="deleteRecibo(${r.id},event)" title="Excluir recibo" style="background:var(--red-bg);color:var(--red);border:1px solid var(--red);padding:0.25rem 0.6rem;border-radius:3px;cursor:pointer;font-size:0.78rem;margin-left:0.25rem">✕</button>
+        </div>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+// ─────────────────────────────────────────────────────────
+// RECIBOS — criar recibo
+// ─────────────────────────────────────────────────────────
+function openCreateRecibo() {
+  state.reciboSelectedIds = new Set();
+  document.getElementById('recibo-num').value = '';
+  document.getElementById('recibo-data').value = '';
+  document.getElementById('recibo-cliente').value = '';
+  document.getElementById('recibo-mes-select').innerHTML =
+    '<option value="">Selecione um mês…</option>' +
+    state.months.map(m=>`<option value="${m.id}">${m.label}</option>`).join('');
+  document.getElementById('recibo-entry-filter').value = '';
+  document.getElementById('recibo-entries-list').innerHTML =
+    '<div style="padding:2rem;text-align:center;color:var(--gray-d);font-size:0.82rem">Selecione um mês acima</div>';
+  updateReciboTotals();
+  document.getElementById('modal-recibo').style.display = 'flex';
+}
+
+function renderReciboEntries() {
+  const mesId = document.getElementById('recibo-mes-select').value;
+  const filter= document.getElementById('recibo-entry-filter').value.toLowerCase();
+  const container = document.getElementById('recibo-entries-list');
+  if (!mesId) {
+    container.innerHTML = '<div style="padding:2rem;text-align:center;color:var(--gray-d);font-size:0.82rem">Selecione um mês acima</div>';
+    return;
+  }
+  const m = state.months.find(x=>x.id===mesId);
+  if (!m) return;
+
+  const entries = m.entries.filter(e => {
+    const alreadyFaturado = (e.status||'').toUpperCase() === 'FATURADO';
+    const alreadyPago     = (e.status||'').toUpperCase() === 'PAGO';
+    if (alreadyPago) return false; // já pago, não pode selecionar
+    const matchFilter = !filter || [e.cliente,e.processo,e.grerj].some(v=>(v||'').toLowerCase().includes(filter));
+    return matchFilter;
+  });
+
+  if (entries.length === 0) {
+    container.innerHTML = '<div style="padding:2rem;text-align:center;color:var(--gray-d);font-size:0.82rem">Nenhum lançamento disponível neste mês</div>';
+    return;
+  }
+
+  container.innerHTML = entries.map(e => {
+    const selected = state.reciboSelectedIds.has(e.id);
+    const isFat = (e.status||'').toUpperCase() === 'FATURADO';
+    return `<label class="recibo-entry-item ${selected?'selected':''}" style="${isFat?'opacity:0.6':''}">
+      <input type="checkbox" ${selected?'checked':''} onchange="toggleReciboEntry('${mesId}',${e.id},this.checked)">
+      <div class="recibo-entry-info">
+        <div class="recibo-entry-cliente">${e.cliente||'—'} ${isFat?'<span style="font-size:0.65rem;color:var(--gold);background:var(--navy);padding:0.1rem 0.35rem;border-radius:10px">FATURADO</span>':''}</div>
+        <div class="recibo-entry-meta">${e.grerj||'—'} · ${e.processo||'—'} · ${formatDate(e.date)}</div>
+      </div>
+      <div class="recibo-entry-valor">${formatBRL(parseValor(e.valor))}</div>
+    </label>`;
+  }).join('');
+}
+
+function toggleReciboEntry(mesId, entryId, checked) {
+  if (checked) state.reciboSelectedIds.add(entryId);
+  else state.reciboSelectedIds.delete(entryId);
+  updateReciboTotals();
+  renderReciboEntries();
+}
+
+function updateReciboTotals() {
+  let total = 0;
+  let clientes = new Set();
+  state.reciboSelectedIds.forEach(id => {
+    for (const m of state.months) {
+      const e = m.entries.find(x=>x.id===id);
+      if (e) { total += parseValor(e.valor); if(e.cliente) clientes.add(e.cliente); break; }
+    }
+  });
+  document.getElementById('recibo-total-display').textContent = formatBRL(total);
+  document.getElementById('recibo-count-display').textContent = `${state.reciboSelectedIds.size} lançamento${state.reciboSelectedIds.size!==1?'s':''} selecionado${state.reciboSelectedIds.size!==1?'s':''}`;
+
+  // Auto-preenche cliente se todos forem do mesmo
+  if (clientes.size === 1) {
+    document.getElementById('recibo-cliente').value = [...clientes][0];
+  } else if (clientes.size > 1) {
+    document.getElementById('recibo-cliente').value = 'Múltiplos clientes';
+  } else {
+    document.getElementById('recibo-cliente').value = '';
+  }
+
+  // Chips dos selecionados
+  const summary = document.getElementById('recibo-selected-summary');
+  const chips = [...state.reciboSelectedIds].map(id => {
+    let label = `#${id}`;
+    for (const m of state.months) {
+      const e = m.entries.find(x=>x.id===id);
+      if (e) { label = `${e.grerj||id} — ${e.cliente||''}`; break; }
+    }
+    return `<span class="recibo-selected-chip">${label}<button onclick="toggleReciboEntry(null,${id},false)">×</button></span>`;
+  }).join('');
+  summary.innerHTML = chips ? `<div style="font-size:0.72rem;color:var(--gray-d);margin-bottom:0.4rem;font-family:var(--font-mono)">SELECIONADOS</div>${chips}` : '';
+}
+
+async function confirmCreateRecibo() {
+  const num    = document.getElementById('recibo-num').value.trim();
+  const data   = document.getElementById('recibo-data').value;
+  const cliente= document.getElementById('recibo-cliente').value.trim();
+
+  if (!num)  { alert('Informe o número do recibo.'); return; }
+  if (!data) { alert('Informe a data do recibo.'); return; }
+  if (state.reciboSelectedIds.size === 0) { alert('Selecione ao menos um lançamento.'); return; }
+
+  let total = 0;
+  state.reciboSelectedIds.forEach(id => {
+    for (const m of state.months) {
+      const e = m.entries.find(x=>x.id===id);
+      if (e) { total += parseValor(e.valor); break; }
+    }
+  });
+
+  const entryIds = [...state.reciboSelectedIds].join(',');
+  const newId = Date.now();
+
+  const btn = document.querySelector('#modal-recibo .btn-gold');
+  btn.disabled = true; btn.textContent = 'Salvando…';
+
+  try {
+    // 1. Criar no Em_Aberto
+    const res = await fetch(API_ABERTO, {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ data: [{ id: newId, cliente, recibo: num, data, valor: total, status: '', entries: entryIds }] })
+    });
+    if (!res.ok) throw new Error('Erro ao criar recibo no Em Aberto');
+
+    // 2. Marcar cada lançamento como FATURADO na Base_de_Dados
+    const patchPromises = [...state.reciboSelectedIds].map(id =>
+      fetch(`${API_URL}/id/${id}`, {
+        method: 'PATCH',
+        headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({ data: { status: 'FATURADO' } })
+      })
+    );
+    await Promise.all(patchPromises);
+
+    // 3. Atualiza state local
+    state.clientesAberto.push({ id: newId, cliente, recibo: num, data, valor: total, status: '', entries: entryIds });
+    state.reciboSelectedIds.forEach(id => {
+      for (const m of state.months) {
+        const e = m.entries.find(x=>x.id===id);
+        if (e) { e.status = 'FATURADO'; break; }
+      }
+    });
+
+    closeModal('modal-recibo');
+    renderRecibosPage();
+    renderSidebar();
+    renderClientes();
+    alert(`Recibo ${num} criado com sucesso!\nTotal: ${formatBRL(total)}\nLançamentos: ${state.reciboSelectedIds.size}`);
+  } catch(e) {
+    alert('Erro: ' + e.message);
+  } finally {
+    btn.disabled = false; btn.textContent = 'Criar Recibo';
+  }
+}
+
+// ─────────────────────────────────────────────────────────
+// RECIBOS — excluir recibo
+// ─────────────────────────────────────────────────────────
+async function deleteRecibo(id, event) {
+  if (event) event.stopPropagation();
+  const r = state.clientesAberto.find(x => x.id === id);
+  if (!r) return;
+
+  const isPago = r.status === 'PAGO';
+  const msg = isPago
+    ? `Tem certeza que deseja EXCLUIR o recibo ${r.recibo}?\n\nAtenção: este recibo já está marcado como PAGO. Os lançamentos vinculados voltarão para o status anterior.\n\nEsta ação não pode ser desfeita.`
+    : `Tem certeza que deseja EXCLUIR o recibo ${r.recibo}?\n\nOs ${r.entries ? r.entries.split(',').filter(Boolean).length : 0} lançamentos vinculados voltarão ao status original.\n\nEsta ação não pode ser desfeita.`;
+
+  if (!confirm(msg)) return;
+
+  try {
+    // 1. Deletar do Em_Aberto
+    const res = await fetch(`${API_URL}/id/${id}?sheet=Em_Aberto`, { method: 'DELETE' });
+    if (!res.ok) throw new Error(`Erro ao excluir (${res.status})`);
+
+    // 2. Reverter lançamentos vinculados para status vazio
+    if (r.entries) {
+      const ids = r.entries.split(',').map(s => s.trim()).filter(Boolean);
+      await Promise.all(ids.map(entryId =>
+        fetch(`${API_URL}/id/${entryId}`, {
+          method: 'PATCH',
+          headers: {'Content-Type':'application/json'},
+          body: JSON.stringify({ data: { status: '' } })
+        })
+      ));
+      // Atualiza estado local
+      ids.forEach(entryId => {
+        const numId = parseInt(entryId);
+        for (const m of state.months) {
+          const e = m.entries.find(x => x.id === numId);
+          if (e) { e.status = ''; break; }
+        }
+      });
+    }
+
+    // 3. Remove do estado local
+    state.clientesAberto = state.clientesAberto.filter(x => x.id !== id);
+
+    renderRecibosPage();
+    renderSidebar();
+    renderClientes();
+  } catch(e) {
+    alert('Erro ao excluir recibo: ' + e.message);
+  }
+}
+
+// ─────────────────────────────────────────────────────────
+// RECIBOS — editar recibo (número, data, cliente)
+// ─────────────────────────────────────────────────────────
+function openEditRecibo(id, event) {
+  if (event) event.stopPropagation();
+  const r = state.clientesAberto.find(x => x.id === id);
+  if (!r) return;
+
+  document.getElementById('edit-recibo-id').value = id;
+  document.getElementById('edit-recibo-num').value = r.recibo || '';
+  document.getElementById('edit-recibo-data').value = r.data || '';
+  document.getElementById('edit-recibo-cliente').value = r.cliente || '';
+  document.getElementById('edit-recibo-valor').value = r.valor || '';
+  document.getElementById('modal-edit-recibo').style.display = 'flex';
+}
+
+async function confirmEditRecibo() {
+  const id     = parseInt(document.getElementById('edit-recibo-id').value);
+  const num    = document.getElementById('edit-recibo-num').value.trim();
+  const data   = document.getElementById('edit-recibo-data').value;
+  const cliente= document.getElementById('edit-recibo-cliente').value.trim();
+  const valor  = parseFloat(String(document.getElementById('edit-recibo-valor').value).replace(',','.')) || 0;
+
+  if (!num) { alert('Informe o número do recibo.'); return; }
+
+  const btn = document.querySelector('#modal-edit-recibo .btn-gold');
+  btn.disabled = true; btn.textContent = 'Salvando…';
+
+  try {
+    const res = await fetch(`${API_URL}/id/${id}?sheet=Em_Aberto`, {
+      method: 'PATCH',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ data: { recibo: num, data, cliente, valor } })
+    });
+    if (!res.ok) throw new Error(`Erro ao salvar (${res.status})`);
+
+    // Atualiza estado local
+    const r = state.clientesAberto.find(x => x.id === id);
+    if (r) { r.recibo = num; r.data = data; r.cliente = cliente; r.valor = valor; }
+
+    closeModal('modal-edit-recibo');
+    renderRecibosPage();
+    renderSidebar();
+    renderClientes();
+  } catch(e) {
+    alert('Erro ao editar recibo: ' + e.message);
+  } finally {
+    btn.disabled = false; btn.textContent = 'Salvar';
+  }
 }
 
 function showMonth(id) {
@@ -2139,13 +2714,21 @@ function filterTable() {
 // ─────────────────────────────────────────────────────────
 // MODALS
 // ─────────────────────────────────────────────────────────
-function openModal(id) { document.getElementById(id).classList.add('open'); }
-function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+function openModal(id) {
+  const el = document.getElementById(id);
+  el.classList.add('open');
+  el.style.display = 'flex';
+}
+function closeModal(id) {
+  const el = document.getElementById(id);
+  el.classList.remove('open');
+  el.style.display = 'none';
+}
 
 document.querySelectorAll('.modal-overlay').forEach(m => {
   m.addEventListener('click', e => { if(e.target===m) {
     if (m.id === 'modal-addentry') closeEntryModal();
-    else m.classList.remove('open');
+    else closeModal(m.id);
   }});
 });
 
