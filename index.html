@@ -1476,9 +1476,16 @@
 
 <script>
 // ─────────────────────────────────────────────────────────
-// CONFIG
+// CONFIG — Supabase
 // ─────────────────────────────────────────────────────────
-const API_URL = 'https://sheetdb.io/api/v1/2udn9s4iopfks';
+const SB_URL  = 'https://ujvjbmnztdttryhwlpuq.supabase.co';
+const SB_KEY  = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVqdmpibW56dGR0dHJ5aHdscHVxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY4NjU2ODcsImV4cCI6MjA5MjQ0MTY4N30.OMsQih7m6-BJI4CjSZkurwT4HxGx3gb0wHJWq-YIoZQ';
+const SB_HEADERS = {
+  'Content-Type':  'application/json',
+  'apikey':        SB_KEY,
+  'Authorization': `Bearer ${SB_KEY}`,
+  'Prefer':        'return=representation',
+};
 
 let state = {
   months: [],
@@ -1488,13 +1495,62 @@ let state = {
   clientesAberto: [],
   editingAbertoId: null,
   abertoFilter: 'todos',
-  abertoYears: new Set(),   // vazio = todos os anos
-  // Recibos
-  reciboSelectedIds: new Set(), // IDs de entradas selecionadas no modal
+  abertoYears: new Set(),
+  reciboSelectedIds: new Set(),
 };
 
-// URL da aba Em_Aberto (mesmo SheetDB, sheet diferente)
-const API_ABERTO = `${API_URL}?sheet=Em_Aberto`;
+// ─────────────────────────────────────────────────────────
+// CAMADA DE API — Supabase REST
+// Tabelas: custas (Base_de_Dados) e em_aberto (Em_Aberto)
+// ─────────────────────────────────────────────────────────
+const TABLE = { 'Base_de_Dados': 'custas', 'Em_Aberto': 'em_aberto' };
+
+const api = {
+  // GET: busca todos os registros
+  async get(sheet) {
+    const table = TABLE[sheet] || sheet;
+    const res = await fetch(`${SB_URL}/rest/v1/${table}?select=*&order=id.asc&limit=10000`, {
+      headers: SB_HEADERS,
+    });
+    if (!res.ok) throw new Error(`GET falhou (${res.status}): ${await res.text()}`);
+    return res.json();
+  },
+
+  // POST: insere novos registros
+  async post(sheet, records) {
+    const table = TABLE[sheet] || sheet;
+    const res = await fetch(`${SB_URL}/rest/v1/${table}`, {
+      method: 'POST',
+      headers: SB_HEADERS,
+      body: JSON.stringify(records),
+    });
+    if (!res.ok) throw new Error(`POST falhou (${res.status}): ${await res.text()}`);
+    return res.json();
+  },
+
+  // PATCH: atualiza campos de um registro pelo id
+  async patch(sheet, id, data) {
+    const table = TABLE[sheet] || sheet;
+    const res = await fetch(`${SB_URL}/rest/v1/${table}?id=eq.${id}`, {
+      method: 'PATCH',
+      headers: SB_HEADERS,
+      body: JSON.stringify(data),
+    });
+    if (!res.ok) throw new Error(`PATCH falhou (${res.status}): ${await res.text()}`);
+    return res.json();
+  },
+
+  // DELETE: remove um registro pelo id
+  async delete(sheet, id) {
+    const table = TABLE[sheet] || sheet;
+    const res = await fetch(`${SB_URL}/rest/v1/${table}?id=eq.${id}`, {
+      method: 'DELETE',
+      headers: { ...SB_HEADERS, 'Prefer': 'return=minimal' },
+    });
+    if (!res.ok) throw new Error(`DELETE falhou (${res.status}): ${await res.text()}`);
+    return {};
+  },
+};
 
 // ─────────────────────────────────────────────────────────
 // COMUNICAÇÃO COM A NUVEM
@@ -1502,14 +1558,10 @@ const API_ABERTO = `${API_URL}?sheet=Em_Aberto`;
 async function loadState() {
   document.getElementById('stat-total').textContent = "Carregando…";
   try {
-    // Carrega Base_de_Dados e Em_Aberto em paralelo
-    const [response, responseAberto] = await Promise.all([
-      fetch(API_URL),
-      fetch(API_ABERTO),
+    const [data, dataAberto] = await Promise.all([
+      api.get('Base_de_Dados'),
+      api.get('Em_Aberto').catch(() => []),
     ]);
-
-    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-    const data = await response.json();
 
     const monthsMap = {};
     data.forEach(row => {
@@ -1517,49 +1569,37 @@ async function loadState() {
       if (!monthsMap[row.mes_id]) {
         const parts = row.mes_id.split('-');
         const label = parts.length === 2 ? `${parts[0]} / 20${parts[1]}` : row.mes_id;
-        monthsMap[row.mes_id] = { id: row.mes_id, label: label, entries: [] };
+        monthsMap[row.mes_id] = { id: row.mes_id, label, entries: [] };
       }
       if (row.grerj || row.cliente || row.valor) {
         monthsMap[row.mes_id].entries.push({
-          id: parseInt(row.id),
-          grerj: row.grerj || '',
-          date: row.data || '',
-          tipo: row.tipo || '',
-          cliente: row.cliente || '',
-          valor: parseValor(row.valor),
-          processo: row.processo || '',
-          classe: row.classe || '',
-          parte: row.parte || '',
-          reimb: row.reembolsavel || '',
-          status: row.status || '',
-          obs: row.obs || '',
+          id:       parseInt(row.id),
+          grerj:    row.grerj         || '',
+          date:     row.data          || '',
+          tipo:     row.tipo          || '',
+          cliente:  row.cliente       || '',
+          valor:    parseValor(row.valor),
+          processo: row.processo      || '',
+          classe:   row.classe        || '',
+          parte:    row.parte         || '',
+          reimb:    row.reembolsavel  || '',
+          status:   row.status        || '',
+          obs:      row.obs           || '',
         });
       }
     });
 
     state.months = Object.values(monthsMap);
 
-    // Carrega Em_Aberto
-    if (responseAberto.ok) {
-      const dataAberto = await responseAberto.json();
-      state.clientesAberto = dataAberto.map(row => {
-        // normaliza chaves: remove espaços e converte para minúsculas
-        const r = {};
-        Object.keys(row).forEach(k => { r[k.trim().toLowerCase()] = row[k]; });
-        return {
-          id: parseInt(r.id),
-          cliente: r.cliente || '',
-          recibo: r.recibo || r.nº || r['nº do recibo'] || '',
-          data: r.data || '',
-          valor: parseValor(r.valor),
-          status: (r.status || '').toUpperCase(),
-          entries: r.entries || '', // IDs dos lançamentos vinculados (separados por vírgula)
-        };
-      }).filter(r => r.cliente && r.cliente.trim() !== '');
-    } else {
-      console.warn('Aba Em_Aberto não encontrada. Crie a aba no Google Sheets.');
-      state.clientesAberto = [];
-    }
+    state.clientesAberto = dataAberto.map(row => ({
+      id:      parseInt(row.id),
+      cliente: row.cliente || '',
+      recibo:  row.recibo  || '',
+      data:    row.data    || '',
+      valor:   parseValor(row.valor),
+      status:  (row.status || '').toUpperCase(),
+      entries: row.entries || '',
+    })).filter(r => r.cliente && r.cliente.trim() !== '');
 
     renderSidebar();
     renderResumo();
@@ -1567,9 +1607,9 @@ async function loadState() {
     if (state.currentMonth) showMonth(state.currentMonth);
 
   } catch (error) {
-    console.error("Falha ao conectar com o SheetDB:", error);
+    console.error("Erro ao conectar com Supabase:", error);
     document.getElementById('stat-total').textContent = "Erro de conexão";
-    alert('Erro de conexão. Abra o dashboard via Live Server (VS Code) ou servidor HTTP — não pelo explorador de arquivos.');
+    alert('Erro de conexão com o Supabase: ' + error.message);
   }
 }
 
@@ -1966,12 +2006,11 @@ async function confirmSaveAberto() {
   const cliente = document.getElementById('aberto-cliente').value.trim();
   const recibo  = document.getElementById('aberto-recibo').value.trim();
   const valor   = parseFloat(document.getElementById('aberto-valor').value);
-  const dataRaw = document.getElementById('aberto-data').value; // YYYY-MM-DD
+  const dataRaw = document.getElementById('aberto-data').value;
 
   if (!cliente) { alert('Informe o nome do cliente.'); return; }
   if (isNaN(valor) || valor <= 0) { alert('Informe um valor válido.'); return; }
 
-  // Armazenar data no formato DD/MM/YYYY para compatibilidade com a planilha
   let dataFormatada = dataRaw;
   if (dataRaw && dataRaw.includes('-')) {
     const [y,m,d] = dataRaw.split('-');
@@ -1985,34 +2024,21 @@ async function confirmSaveAberto() {
 
   try {
     if (state.editingAbertoId !== null) {
-      // EDITAR (PATCH)
-      const response = await fetch(`${API_URL}/id/${state.editingAbertoId}?sheet=Em_Aberto`, {
-        method: 'PATCH',
-        headers: { 'Accept': 'application/json', 'Content-Type': 'application/json' },
-        body: JSON.stringify({ data: { cliente, recibo, data: dataFormatada, valor } })
-      });
-      if (!response.ok) throw new Error("Falha no PATCH");
+      await api.patch('Em_Aberto', state.editingAbertoId, { cliente, recibo, data: dataFormatada, valor });
       const entry = state.clientesAberto.find(r=>r.id===state.editingAbertoId);
       if (entry) { entry.cliente=cliente; entry.recibo=recibo; entry.data=dataFormatada; entry.valor=valor; }
     } else {
-      // NOVO (POST)
       const newId = Date.now();
-      const response = await fetch(API_ABERTO, {
-        method: 'POST',
-        headers: { 'Accept': 'application/json', 'Content-Type': 'application/json' },
-        body: JSON.stringify({ data: [{ id: newId, cliente, recibo, data: dataFormatada, valor }] })
-      });
-      if (!response.ok) throw new Error("Falha no POST");
+      await api.post('Em_Aberto', [{ id: newId, cliente, recibo, data: dataFormatada, valor }]);
       state.clientesAberto.push({ id: newId, cliente, recibo, data: dataFormatada, valor });
     }
-
     closeModal('modal-aberto');
     state.editingAbertoId = null;
     renderClientes();
     renderSidebar();
   } catch(e) {
     console.error(e);
-    alert("Erro ao salvar. Verifique se a aba 'Em_Aberto' existe na planilha e se o SheetDB tem permissão de escrita.");
+    alert("Erro ao salvar: " + e.message);
   } finally {
     btn.textContent = txtOriginal;
     btn.disabled = false;
@@ -2033,19 +2059,11 @@ function setAbertoYear(year) {
   renderClientes();
 }
 
-/// Cascade: aplica status a todos os lançamentos vinculados ao recibo
 async function cascadeEntryStatus(r, newStatus) {
   if (!r.entries) return;
   const ids = r.entries.split(',').map(s=>s.trim()).filter(Boolean);
   if (ids.length === 0) return;
-  await Promise.all(ids.map(entryId =>
-    fetch(`${API_URL}/id/${entryId}`, {
-      method: 'PATCH',
-      headers: {'Content-Type':'application/json'},
-      body: JSON.stringify({ data: { status: newStatus } })
-    })
-  ));
-  // Atualiza state local
+  await Promise.all(ids.map(entryId => api.patch('Base_de_Dados', parseInt(entryId), { status: newStatus })));
   ids.forEach(entryId => {
     const numId = parseInt(entryId);
     for (const m of state.months) {
@@ -2063,21 +2081,13 @@ async function markAbertoAsPaid(id, evt) {
   const msg = `Marcar recibo ${r.recibo} de ${r.cliente} como PAGO?\n\n${formatBRL(r.valor)}${hasEntries ? `\n\nOs ${r.entries.split(',').filter(Boolean).length} lançamentos vinculados também serão marcados como PAGO.` : ''}`;
   if (!confirm(msg)) return;
   try {
-    const res = await fetch(`${API_URL}/id/${id}?sheet=Em_Aberto`, {
-      method: 'PATCH',
-      headers: {'Content-Type':'application/json'},
-      body: JSON.stringify({ data: { status: 'PAGO' } })
-    });
-    if (res.ok) {
-      r.status = 'PAGO';
-      await cascadeEntryStatus(r, 'PAGO');
-      renderClientes();
-      renderRecibosPage();
-    } else {
-      alert('Erro ao atualizar. Verifique se a coluna "status" existe na aba Em_Aberto do Google Sheets.');
-    }
+    await api.patch('Em_Aberto', id, { status: 'PAGO' });
+    r.status = 'PAGO';
+    await cascadeEntryStatus(r, 'PAGO');
+    renderClientes();
+    renderRecibosPage();
   } catch(e) {
-    alert('Erro de rede: ' + e.message);
+    alert('Erro ao atualizar: ' + e.message);
   }
 }
 
@@ -2087,21 +2097,13 @@ async function undoAbertoPayment(id, evt) {
   if (!r || r.status !== 'PAGO') return;
   if (!confirm(`Reabrir recibo ${r.recibo} de ${r.cliente}?\n\nO pagamento será desfeito e os lançamentos voltarão para FATURADO.`)) return;
   try {
-    const res = await fetch(`${API_URL}/id/${id}?sheet=Em_Aberto`, {
-      method: 'PATCH',
-      headers: {'Content-Type':'application/json'},
-      body: JSON.stringify({ data: { status: '' } })
-    });
-    if (res.ok) {
-      r.status = '';
-      await cascadeEntryStatus(r, 'FATURADO');
-      renderClientes();
-      renderRecibosPage();
-    } else {
-      alert('Erro ao reabrir recibo.');
-    }
+    await api.patch('Em_Aberto', id, { status: '' });
+    r.status = '';
+    await cascadeEntryStatus(r, 'FATURADO');
+    renderClientes();
+    renderRecibosPage();
   } catch(e) {
-    alert('Erro de rede: ' + e.message);
+    alert('Erro ao reabrir: ' + e.message);
   }
 }
 
@@ -2115,17 +2117,13 @@ async function deleteAberto(id, evt) {
   if (btn) btn.textContent = '⏳';
 
   try {
-    const response = await fetch(`${API_URL}/id/${id}?sheet=Em_Aberto`, {
-      method: 'DELETE',
-      headers: { 'Accept': 'application/json', 'Content-Type': 'application/json' }
-    });
-    if (!response.ok) throw new Error("Falha no DELETE");
+    await api.delete('Em_Aberto', id);
     state.clientesAberto = state.clientesAberto.filter(r=>r.id!==id);
     renderClientes();
     renderSidebar();
   } catch(e) {
     console.error(e);
-    alert("Erro ao excluir o recibo.");
+    alert("Erro ao excluir o recibo: " + e.message);
     if (btn) btn.textContent = '✕';
   }
 }
@@ -2555,22 +2553,12 @@ async function confirmCreateRecibo() {
 
   try {
     // 1. Criar no Em_Aberto
-    const res = await fetch(API_ABERTO, {
-      method: 'POST',
-      headers: {'Content-Type':'application/json'},
-      body: JSON.stringify({ data: [{ id: newId, cliente, recibo: num, data, valor: total, status: '', entries: entryIds }] })
-    });
-    if (!res.ok) throw new Error('Erro ao criar recibo no Em Aberto');
+    await api.post('Em_Aberto', [{ id: newId, cliente, recibo: num, data, valor: total, status: '', entries: entryIds }]);
 
-    // 2. Marcar cada lançamento como FATURADO na Base_de_Dados
-    const patchPromises = [...state.reciboSelectedIds].map(id =>
-      fetch(`${API_URL}/id/${id}`, {
-        method: 'PATCH',
-        headers: {'Content-Type':'application/json'},
-        body: JSON.stringify({ data: { status: 'FATURADO' } })
-      })
-    );
-    await Promise.all(patchPromises);
+    // 2. Marcar cada lançamento como FATURADO
+    await Promise.all([...state.reciboSelectedIds].map(id =>
+      api.patch('Base_de_Dados', id, { status: 'FATURADO' })
+    ));
 
     // 3. Atualiza state local
     state.clientesAberto.push({ id: newId, cliente, recibo: num, data, valor: total, status: '', entries: entryIds });
@@ -2610,20 +2598,12 @@ async function deleteRecibo(id, event) {
 
   try {
     // 1. Deletar do Em_Aberto
-    const res = await fetch(`${API_URL}/id/${id}?sheet=Em_Aberto`, { method: 'DELETE' });
-    if (!res.ok) throw new Error(`Erro ao excluir (${res.status})`);
+    await api.delete('Em_Aberto', id);
 
     // 2. Reverter lançamentos vinculados para status vazio
     if (r.entries) {
       const ids = r.entries.split(',').map(s => s.trim()).filter(Boolean);
-      await Promise.all(ids.map(entryId =>
-        fetch(`${API_URL}/id/${entryId}`, {
-          method: 'PATCH',
-          headers: {'Content-Type':'application/json'},
-          body: JSON.stringify({ data: { status: '' } })
-        })
-      ));
-      // Atualiza estado local
+      await Promise.all(ids.map(entryId => api.patch('Base_de_Dados', parseInt(entryId), { status: '' })));
       ids.forEach(entryId => {
         const numId = parseInt(entryId);
         for (const m of state.months) {
@@ -2635,7 +2615,6 @@ async function deleteRecibo(id, event) {
 
     // 3. Remove do estado local
     state.clientesAberto = state.clientesAberto.filter(x => x.id !== id);
-
     renderRecibosPage();
     renderSidebar();
     renderClientes();
@@ -2673,17 +2652,9 @@ async function confirmEditRecibo() {
   btn.disabled = true; btn.textContent = 'Salvando…';
 
   try {
-    const res = await fetch(`${API_URL}/id/${id}?sheet=Em_Aberto`, {
-      method: 'PATCH',
-      headers: {'Content-Type':'application/json'},
-      body: JSON.stringify({ data: { recibo: num, data, cliente, valor } })
-    });
-    if (!res.ok) throw new Error(`Erro ao salvar (${res.status})`);
-
-    // Atualiza estado local
+    await api.patch('Em_Aberto', id, { recibo: num, data, cliente, valor });
     const r = state.clientesAberto.find(x => x.id === id);
     if (r) { r.recibo = num; r.data = data; r.cliente = cliente; r.valor = valor; }
-
     closeModal('modal-edit-recibo');
     renderRecibosPage();
     renderSidebar();
@@ -2822,12 +2793,12 @@ async function confirmAddEntry() {
 
   const btn = document.getElementById('modal-entry-save-btn');
   const txtOriginal = btn.textContent;
-  btn.textContent = 'Enviando para o Google Sheets…';
+  btn.textContent = 'Salvando…';
   btn.disabled = true;
 
   const newId = Date.now();
   const newEntry = {
-    id: newId,
+    id:       newId,
     grerj:    document.getElementById('entry-grerj').value.trim(),
     date:     document.getElementById('entry-date').value,
     tipo:     document.getElementById('entry-tipo').value,
@@ -2842,17 +2813,12 @@ async function confirmAddEntry() {
   };
 
   try {
-    const response = await fetch(API_URL, {
-      method: 'POST',
-      headers: { 'Accept': 'application/json', 'Content-Type': 'application/json' },
-      body: JSON.stringify({ data: [{
-        id: newEntry.id, mes_id: monthId, grerj: newEntry.grerj, data: newEntry.date,
-        tipo: newEntry.tipo, cliente: newEntry.cliente, valor: newEntry.valor,
-        processo: newEntry.processo, classe: newEntry.classe, parte: newEntry.parte,
-        reembolsavel: newEntry.reimb, status: newEntry.status, obs: newEntry.obs
-      }]})
-    });
-    if (!response.ok) throw new Error("A nuvem negou a gravação.");
+    await api.post('Base_de_Dados', [{
+      id: newEntry.id, mes_id: monthId, grerj: newEntry.grerj, data: newEntry.date,
+      tipo: newEntry.tipo, cliente: newEntry.cliente, valor: newEntry.valor,
+      processo: newEntry.processo, classe: newEntry.classe, parte: newEntry.parte,
+      reembolsavel: newEntry.reimb, status: newEntry.status, obs: newEntry.obs
+    }]);
     m.entries.push(newEntry);
     closeEntryModal();
     renderSidebar();
@@ -2860,7 +2826,7 @@ async function confirmAddEntry() {
     renderResumo();
   } catch(e) {
     console.error(e);
-    alert("Erro crítico: Os dados não foram salvos na planilha. Inspecione o erro no console (F12).");
+    alert("Erro ao salvar o lançamento: " + e.message);
   } finally {
     btn.textContent = txtOriginal;
     btn.disabled = false;
@@ -2878,7 +2844,7 @@ async function confirmEditEntry() {
 
   const btn = document.getElementById('modal-entry-save-btn');
   const txtOriginal = btn.textContent;
-  btn.textContent = 'Atualizando na planilha…';
+  btn.textContent = 'Atualizando…';
   btn.disabled = true;
 
   const updatedData = {
@@ -2896,14 +2862,8 @@ async function confirmEditEntry() {
   };
 
   try {
-    const response = await fetch(`${API_URL}/id/${entryId}`, {
-      method: 'PATCH',
-      headers: { 'Accept': 'application/json', 'Content-Type': 'application/json' },
-      body: JSON.stringify({ data: updatedData })
-    });
-    if (!response.ok) throw new Error("Falha no PATCH");
+    await api.patch('Base_de_Dados', entryId, updatedData);
 
-    // Atualizar estado local
     const entry = m.entries.find(e=>e.id===entryId);
     if (entry) {
       entry.grerj    = updatedData.grerj;
@@ -2925,7 +2885,7 @@ async function confirmEditEntry() {
     renderResumo();
   } catch(e) {
     console.error(e);
-    alert("Erro ao atualizar na planilha. Verifique o console (F12).");
+    alert("Erro ao atualizar: " + e.message);
   } finally {
     btn.textContent = txtOriginal;
     btn.disabled = false;
@@ -2950,18 +2910,13 @@ async function markAsPaid(monthId, entryId, evt) {
   btn.disabled = true;
 
   try {
-    const response = await fetch(`${API_URL}/id/${entryId}`, {
-      method: 'PATCH',
-      headers: { 'Accept': 'application/json', 'Content-Type': 'application/json' },
-      body: JSON.stringify({ data: { status: 'PAGO' } })
-    });
-    if (!response.ok) throw new Error("Falha no PATCH");
+    await api.patch('Base_de_Dados', entryId, { status: 'PAGO' });
     entry.status = 'PAGO';
     renderMonthTable();
     renderSidebar();
   } catch(e) {
     console.error(e);
-    alert("Erro ao marcar como pago.");
+    alert("Erro ao marcar como pago: " + e.message);
     btn.textContent = originalText;
     btn.disabled = false;
   }
@@ -2976,7 +2931,7 @@ async function deletePaidEntries() {
   const paid = m.entries.filter(e=>(e.status||'').toUpperCase()==='PAGO');
   if (paid.length === 0) { alert('Nenhum lançamento PAGO neste mês.'); return; }
 
-  if (!confirm(`Excluir ${paid.length} lançamento${paid.length>1?'s':''}  com status PAGO da planilha do Google?\n\nEssa ação não pode ser desfeita.`)) return;
+  if (!confirm(`Excluir ${paid.length} lançamento${paid.length>1?'s':''} com status PAGO da planilha?\n\nEssa ação não pode ser desfeita.`)) return;
 
   const btn = document.getElementById('btn-delete-paid');
   btn.textContent = 'Excluindo…';
@@ -2987,18 +2942,14 @@ async function deletePaidEntries() {
 
   for (const entry of toDelete) {
     try {
-      const response = await fetch(`${API_URL}/id/${entry.id}`, {
-        method: 'DELETE',
-        headers: { 'Accept': 'application/json', 'Content-Type': 'application/json' }
-      });
-      if (!response.ok) throw new Error();
+      await api.delete('Base_de_Dados', entry.id);
       m.entries = m.entries.filter(e=>e.id!==entry.id);
     } catch {
       errors++;
     }
   }
 
-  if (errors > 0) alert(`${errors} lançamento(s) não puderam ser excluídos. Tente novamente.`);
+  if (errors > 0) alert(`${errors} lançamento(s) não puderam ser excluídos.`);
 
   renderMonthTable();
   renderSidebar();
@@ -3018,18 +2969,14 @@ async function deleteEntry(monthId, entryId, evt) {
   rowBtn.textContent = '⏳';
 
   try {
-    const response = await fetch(`${API_URL}/id/${entryId}`, {
-      method: 'DELETE',
-      headers: { 'Accept': 'application/json', 'Content-Type': 'application/json' }
-    });
-    if (!response.ok) throw new Error("Falha no DELETE");
+    await api.delete('Base_de_Dados', entryId);
     m.entries = m.entries.filter(e=>e.id!==entryId);
     renderMonthTable();
     renderSidebar();
     renderResumo();
   } catch(e) {
     console.error(e);
-    alert("Erro ao excluir no banco de dados.");
+    alert("Erro ao excluir: " + e.message);
     rowBtn.textContent = originalText;
   }
 }
@@ -3048,16 +2995,11 @@ async function confirmAddMonth() {
 
   const btn = document.querySelector('#modal-addmonth .btn-gold');
   const txtOriginal = btn.textContent;
-  btn.textContent = 'Criando na nuvem…';
+  btn.textContent = 'Criando…';
   btn.disabled = true;
 
   try {
-    const response = await fetch(API_URL, {
-      method: 'POST',
-      headers: { 'Accept': 'application/json', 'Content-Type': 'application/json' },
-      body: JSON.stringify({ data: [{ id: Date.now(), mes_id: id }] })
-    });
-    if (!response.ok) throw new Error("Erro no POST");
+    await api.post('Base_de_Dados', [{ id: Date.now(), mes_id: id }]);
     state.months.push({ id, label: `${name} / ${year}`, entries: [] });
     closeModal('modal-addmonth');
     renderSidebar();
@@ -3065,7 +3007,7 @@ async function confirmAddMonth() {
     showMonth(id);
   } catch(e) {
     console.error(e);
-    alert('A API rejeitou a criação. Verifique os cabeçalhos da planilha.');
+    alert('Erro ao criar o mês: ' + e.message);
   } finally {
     btn.textContent = txtOriginal;
     btn.disabled = false;
@@ -3078,24 +3020,25 @@ async function confirmAddMonth() {
 async function openDeleteMonth() {
   if (!state.currentMonth) return;
   const m = state.months.find(m=>m.id===state.currentMonth);
-  if (!confirm(`Excluir o mês "${m.label}" e todos os seus ${m.entries.length} lançamentos do Banco de Dados?`)) return;
+  if (!confirm(`Excluir o mês "${m.label}" e todos os seus ${m.entries.length} lançamentos da planilha?`)) return;
   const monthId = state.currentMonth;
   const btn = document.querySelector('.month-toolbar .btn-outline');
-  const txtOriginal = btn.textContent;
-  btn.textContent = 'Deletando na nuvem…';
+  const txtOriginal = btn ? btn.textContent : '';
+  if (btn) { btn.textContent = 'Deletando…'; }
+
   try {
-    const response = await fetch(`${API_URL}/mes_id/${monthId}`, {
-      method: 'DELETE',
-      headers: { 'Accept': 'application/json', 'Content-Type': 'application/json' }
-    });
-    if (!response.ok) throw new Error("Falha no DELETE do mês");
+    // Deletar cada entry individualmente
+    for (const entry of m.entries) {
+      await api.delete('Base_de_Dados', entry.id);
+    }
+    // Deletar a linha "cabeçalho" do mês se existir (linha com apenas mes_id)
     state.months = state.months.filter(month=>month.id!==monthId);
     state.currentMonth = null;
     renderSidebar();
     showPage('resumo');
   } catch(e) {
     console.error(e);
-    alert("Erro ao excluir o mês na planilha.");
+    alert("Erro ao excluir o mês: " + e.message);
   } finally {
     if (btn) btn.textContent = txtOriginal;
   }
